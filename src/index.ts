@@ -105,9 +105,9 @@ const startServer = async () => {
             process.exit(1);
         }
 
-        // Database schema already fixed manually - skipping ensureSchema
-        // await db.ensureSchema();
-        logger.info('✅ Database schema already fixed manually');
+        // Ensure database schema exists
+        await db.ensureSchema();
+        logger.info('✅ Database schema ensured');
 
         // Start background services
         logger.info('Starting Solana Mint Discovery System...');
