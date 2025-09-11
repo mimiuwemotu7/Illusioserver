@@ -230,6 +230,11 @@ class DatabaseConnection {
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(255);
                 `);
                 
+                // Make contract_address nullable since we're using mint as primary identifier
+                await client.query(`
+                    ALTER TABLE tokens ALTER COLUMN contract_address DROP NOT NULL;
+                `);
+                
                 // Add unique constraints if they don't exist
                 await client.query(`
                     DO $$
