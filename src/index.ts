@@ -148,16 +148,23 @@ const startServer = async () => {
                 const { stdout } = await execAsync(`lsof -ti:${PORT}`);
                 if (stdout.trim()) {
                     const pids = stdout.trim().split('\n');
-                    logger.info(`Port ${PORT} is in use by PIDs: ${pids.join(', ')}. Freeing port...`);
+                    const currentPid = process.pid.toString();
+                    const otherPids = pids.filter(pid => pid !== currentPid);
                     
-                    // Kill processes using the port
-                    for (const pid of pids) {
-                        try {
-                            process.kill(parseInt(pid), 'SIGTERM');
-                            logger.info(`Killed process ${pid}`);
-                        } catch (error) {
-                            logger.warn(`Failed to kill process ${pid}:`, error);
+                    if (otherPids.length > 0) {
+                        logger.info(`Port ${PORT} is in use by PIDs: ${otherPids.join(', ')}. Freeing port...`);
+                        
+                        // Kill processes using the port (excluding current process)
+                        for (const pid of otherPids) {
+                            try {
+                                process.kill(parseInt(pid), 'SIGTERM');
+                                logger.info(`Killed process ${pid}`);
+                            } catch (error) {
+                                logger.warn(`Failed to kill process ${pid}:`, error);
+                            }
                         }
+                    } else {
+                        logger.info(`Port ${PORT} is in use by current process only. Continuing...`);
                     }
                     
                     // Wait a moment for processes to terminate
