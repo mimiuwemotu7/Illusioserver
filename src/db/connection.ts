@@ -179,6 +179,10 @@ class DatabaseConnection {
                 
                 // Add missing columns if they don't exist
                 await client.query(`
+                    ALTER TABLE tokens ADD COLUMN IF NOT EXISTS mint VARCHAR(255);
+                `);
+                
+                await client.query(`
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS name VARCHAR(255);
                 `);
                 
