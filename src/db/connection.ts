@@ -142,7 +142,6 @@ class DatabaseConnection {
                     CREATE TABLE IF NOT EXISTS tokens (
                         id SERIAL PRIMARY KEY,
                         mint VARCHAR(255) UNIQUE NOT NULL,
-                        contract_address VARCHAR(255) UNIQUE NOT NULL,
                         name VARCHAR(255),
                         symbol VARCHAR(50),
                         creator VARCHAR(255),
@@ -230,9 +229,9 @@ class DatabaseConnection {
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(255);
                 `);
                 
-                // Make contract_address nullable since we're using mint as primary identifier
+                // Remove contract_address column if it exists (legacy cleanup)
                 await client.query(`
-                    ALTER TABLE tokens ALTER COLUMN contract_address DROP NOT NULL;
+                    ALTER TABLE tokens DROP COLUMN IF EXISTS contract_address;
                 `);
                 
                 // Add unique constraints if they don't exist
@@ -298,8 +297,9 @@ class DatabaseConnection {
                     CREATE INDEX IF NOT EXISTS idx_tokens_blocktime ON tokens(blocktime DESC NULLS LAST);
                 `);
                 
+                // Remove contract_address index if it exists (legacy cleanup)
                 await client.query(`
-                    CREATE INDEX IF NOT EXISTS idx_tokens_contract_address ON tokens(contract_address);
+                    DROP INDEX IF EXISTS idx_tokens_contract_address;
                 `);
                 
                 await client.query(`
