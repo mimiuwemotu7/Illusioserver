@@ -1,0 +1,577 @@
+openapi: 3.0.3
+info:
+  title: Solana Token Tracker API
+  description: |
+    A production-ready Node.js backend API for tracking Solana token launches and market data in real-time.
+    
+    ## Features
+    - Real-time token discovery via Helius WebSocket
+    - Live market data from Jupiter and Birdeye APIs
+    - Transaction monitoring and volume analysis
+    - WebSocket support for real-time updates
+    - PostgreSQL database with proper indexing
+    
+    ## Authentication
+    Currently no authentication required. API keys for external services (Helius, Jupiter, Birdeye) are configured server-side.
+    
+    ## Rate Limiting
+    No rate limiting currently implemented.
+    
+    ## WebSocket
+    Connect to `ws://localhost:3000/ws` for real-time updates on token discovery, market cap changes, and transaction events.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.yourdomain.com
+    description: Production server
+
+paths:
+  /:
+    get:
+      summary: API Information
+      description: Get basic information about the Solana Token Tracker API
+      operationId: getApiInfo
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Solana Token Tracker API"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  endpoints:
+                    type: object
+                    properties:
+                      health:
+                        type: string
+                        example: "/health"
+                      tokens:
+                        type: string
+                        example: "/api/tokens"
+                      websocket:
+                        type: string
+                        example: "/ws"
+                  documentation:
+                    type: string
+                    example: "API documentation coming soon"
+
+  /health:
+    get:
+      summary: Health Check
+      description: Check the health status of the API server
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00.000Z"
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+                    example: 3600
+                  environment:
+                    type: string
+                    example: "development"
+
+  /api/tokens:
+    get:
+      summary: List All Tokens
+      description: |
+        Retrieve a paginated list of all tracked tokens with their latest market cap data.
+        Tokens are ordered by creation date (newest first).
+      operationId: listTokens
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of tokens per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: List of tokens with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTokensResponse'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tokens/search:
+    get:
+      summary: Search Tokens
+      description: |
+        Search tokens by name or symbol. Query must be at least 2 characters long.
+        Results are paginated and ordered by relevance.
+      operationId: searchTokens
+      parameters:
+        - name: q
+          in: query
+          description: Search query (minimum 2 characters)
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            example: "SOL"
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of tokens per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Search results with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTokensResponse'
+        '400':
+          description: Invalid search query or pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tokens/{id}:
+    get:
+      summary: Get Token Details
+      description: |
+        Retrieve detailed information about a specific token including its market cap history
+        and transaction statistics.
+      operationId: getTokenById
+      parameters:
+        - name: id
+          in: path
+          description: Token ID
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Token details with market cap history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    $ref: '#/components/schemas/Token'
+                  marketcap_history:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MarketCap'
+                  latest_marketcap:
+                    $ref: '#/components/schemas/MarketCap'
+                  stats:
+                    type: object
+                    properties:
+                      total_marketcap_records:
+                        type: integer
+                        description: Total number of market cap records
+                        example: 150
+                      first_recorded:
+                        type: string
+                        format: date-time
+                        description: Timestamp of first market cap record
+                        example: "2024-01-01T00:00:00.000Z"
+                      last_updated:
+                        type: string
+                        format: date-time
+                        description: Timestamp of last market cap update
+                        example: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Invalid token ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tokens/status/{status}:
+    get:
+      summary: Get Tokens by Status
+      description: |
+        Retrieve a paginated list of tokens filtered by their current status.
+        Valid statuses are: new, upcoming, graduated.
+      operationId: getTokensByStatus
+      parameters:
+        - name: status
+          in: path
+          description: Token status to filter by
+          required: true
+          schema:
+            type: string
+            enum: [new, upcoming, graduated]
+            example: "new"
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of tokens per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Filtered tokens with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTokensResponse'
+        '400':
+          description: Invalid status or pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tokens/source/{source}:
+    get:
+      summary: Get Tokens by Source
+      description: |
+        Retrieve a paginated list of tokens filtered by their discovery source.
+        Valid sources are: pump, meteora, helius.
+      operationId: getTokensBySource
+      parameters:
+        - name: source
+          in: path
+          description: Discovery source to filter by
+          required: true
+          schema:
+            type: string
+            enum: [pump, meteora, helius]
+            example: "helius"
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of tokens per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Filtered tokens with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTokensResponse'
+        '400':
+          description: Invalid source or pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Token:
+      type: object
+      required:
+        - id
+        - name
+        - symbol
+        - contract_address
+        - source
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Unique token identifier
+          example: 1
+        name:
+          type: string
+          description: Token name
+          example: "Sample Token"
+        symbol:
+          type: string
+          description: Token symbol
+          example: "SMP"
+        contract_address:
+          type: string
+          description: Solana contract address (mint address)
+          example: "11111111111111111111111111111111"
+        creator:
+          type: string
+          description: Token creator address
+          example: "Creator1"
+        source:
+          type: string
+          enum: [pump, meteora, helius]
+          description: Discovery source platform
+          example: "helius"
+        launch_time:
+          type: string
+          format: date-time
+          description: Token launch timestamp
+          example: "2024-01-15T10:00:00.000Z"
+        status:
+          type: string
+          enum: [new, upcoming, graduated]
+          description: Current token status
+          example: "new"
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: "2024-01-15T10:00:00.000Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-15T10:30:00.000Z"
+
+    TokenWithMarketCap:
+      allOf:
+        - $ref: '#/components/schemas/Token'
+        - type: object
+          properties:
+            latest_marketcap:
+              $ref: '#/components/schemas/MarketCap'
+
+    MarketCap:
+      type: object
+      required:
+        - id
+        - token_id
+        - timestamp
+      properties:
+        id:
+          type: integer
+          description: Unique market cap record identifier
+          example: 1
+        token_id:
+          type: integer
+          description: Associated token ID
+          example: 1
+        marketcap:
+          type: number
+          format: float
+          description: Market capitalization in USD
+          example: 1000000.50
+        price_usd:
+          type: number
+          format: float
+          description: Token price in USD
+          example: 0.00125
+        volume_24h:
+          type: number
+          format: float
+          description: 24-hour trading volume
+          example: 50000.75
+        timestamp:
+          type: string
+          format: date-time
+          description: Data snapshot timestamp
+          example: "2024-01-15T10:30:00.000Z"
+
+    PaginatedTokensResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenWithMarketCap'
+        pagination:
+          type: object
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+          properties:
+            page:
+              type: integer
+              description: Current page number
+              example: 1
+            limit:
+              type: integer
+              description: Number of items per page
+              example: 20
+            total:
+              type: integer
+              description: Total number of tokens
+              example: 150
+            totalPages:
+              type: integer
+              description: Total number of pages
+              example: 8
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid pagination parameters. Page must be >= 1, limit must be between 1 and 100."
+        path:
+          type: string
+          description: Request path (only in development)
+          example: "/api/tokens"
+        method:
+          type: string
+          description: HTTP method (only in development)
+          example: "GET"
+        stack:
+          type: string
+          description: Error stack trace (only in development)
+
+  examples:
+    TokenExample:
+      summary: Sample token data
+      value:
+        id: 1
+        name: "Sample Token"
+        symbol: "SMP"
+        contract_address: "11111111111111111111111111111111"
+        creator: "Creator1"
+        source: "helius"
+        launch_time: "2024-01-15T10:00:00.000Z"
+        status: "new"
+        created_at: "2024-01-15T10:00:00.000Z"
+        updated_at: "2024-01-15T10:30:00.000Z"
+
+    MarketCapExample:
+      summary: Sample market cap data
+      value:
+        id: 1
+        token_id: 1
+        marketcap: 1000000.50
+        price_usd: 0.00125
+        volume_24h: 50000.75
+        timestamp: "2024-01-15T10:30:00.000Z"
+
+tags:
+  - name: Tokens
+    description: Token management and discovery operations
+  - name: Market Data
+    description: Market capitalization and price data operations
+  - name: Search
+    description: Token search and filtering operations
+  - name: Health
+    description: System health and status operations
+
+externalDocs:
+  description: Find more info about Solana Token Tracker
+  url: https://github.com/yourusername/solana-token-tracker
