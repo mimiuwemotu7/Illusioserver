@@ -149,7 +149,7 @@ const startServer = async () => {
                 if (stdout.trim()) {
                     const pids = stdout.trim().split('\n');
                     const currentPid = process.pid.toString();
-                    const otherPids = pids.filter(pid => pid !== currentPid);
+                    const otherPids = pids.filter((pid: string) => pid !== currentPid);
                     
                     if (otherPids.length > 0) {
                         logger.info(`Port ${PORT} is in use by PIDs: ${otherPids.join(', ')}. Freeing port...`);
