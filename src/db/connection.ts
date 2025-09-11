@@ -214,6 +214,22 @@ class DatabaseConnection {
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS blocktime TIMESTAMPTZ;
                 `);
                 
+                await client.query(`
+                    ALTER TABLE tokens ADD COLUMN IF NOT EXISTS website VARCHAR(255);
+                `);
+                
+                await client.query(`
+                    ALTER TABLE tokens ADD COLUMN IF NOT EXISTS twitter VARCHAR(255);
+                `);
+                
+                await client.query(`
+                    ALTER TABLE tokens ADD COLUMN IF NOT EXISTS telegram VARCHAR(255);
+                `);
+                
+                await client.query(`
+                    ALTER TABLE tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(255);
+                `);
+                
                 // Update status values to match the database constraints
                 await client.query(`
                     ALTER TABLE tokens ALTER COLUMN status TYPE VARCHAR(50);
