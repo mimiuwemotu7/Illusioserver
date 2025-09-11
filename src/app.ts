@@ -19,11 +19,37 @@ app.use(helmet({
 }));
 
 // CORS middleware
+const allowedOrigins = [
+    'https://illusio.xyz', 
+    'https://www.illusio.xyz', 
+    'https://illusio.vercel.app',
+    'http://localhost:3000', 
+    'http://localhost:3001', 
+    'http://localhost:3002', 
+    'http://localhost:3003', 
+    'http://localhost:3004', 
+    'http://localhost:3005', 
+    'http://localhost:3006', 
+    'http://localhost:3007', 
+    'http://localhost:3008', 
+    'http://localhost:8080'
+];
+
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://illusio.xyz', 'https://www.illusio.xyz', 'https://illusio.vercel.app'] // All production domains
-        : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3005', 'http://localhost:3006', 'http://localhost:3007', 'http://localhost:3008', 'http://localhost:8080'],
-    credentials: true
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Body parsing middleware
@@ -37,7 +63,9 @@ app.use((_req, _res, next) => {
         path: _req.path,
         query: _req.query,
         ip: _req.ip,
-        userAgent: _req.get('User-Agent')
+        userAgent: _req.get('User-Agent'),
+        origin: _req.get('Origin'),
+        referer: _req.get('Referer')
     });
     next();
 });
