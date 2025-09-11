@@ -123,34 +123,33 @@ router.get('/search', async (req: Request, res: Response) => {
             });
         }
         
-        // If no local results and query looks like a Solana address (32-44 chars, base58)
-        if (trimmedQuery.length >= 32 && trimmedQuery.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(trimmedQuery)) {
-            logger.info(`No local results for "${trimmedQuery}", checking if it's a valid Solana token...`);
+        // If no local results, try to find the token on-chain
+        logger.info(`No local results for "${trimmedQuery}", checking if it's a valid Solana token...`);
+        
+        try {
+            // Check if this is a valid token mint on Solana
+            const heliusApiKey = process.env.HELIUS_API_KEY;
+            const heliusRpcUrl = process.env.HELIUS_RPC_URL;
             
-            try {
-                // Check if this is a valid token mint on Solana
-                const heliusApiKey = process.env.HELIUS_API_KEY;
-                const heliusRpcUrl = process.env.HELIUS_RPC_URL;
-                
-                if (heliusApiKey && heliusRpcUrl) {
-                    // Get token account info to verify it's a valid token
-                    const response = await fetch(heliusRpcUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0',
-                            id: 1,
-                            method: 'getAccountInfo',
-                            params: [
-                                trimmedQuery,
-                                {
-                                    encoding: 'jsonParsed'
-                                }
-                            ]
-                        })
-                    });
+            if (heliusApiKey && heliusRpcUrl) {
+                // Get token account info to verify it's a valid token
+                const response = await fetch(heliusRpcUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'getAccountInfo',
+                        params: [
+                            trimmedQuery,
+                            {
+                                encoding: 'jsonParsed'
+                            }
+                        ]
+                    })
+                });
                     
                     if (response.ok) {
                         const data: any = await response.json();
@@ -263,6 +262,23 @@ router.get('/search', async (req: Request, res: Response) => {
             } catch (error) {
                 logger.error('Error checking Solana token:', error);
             }
+        } else {
+            logger.warn('Helius API not configured, cannot check on-chain tokens');
+        }
+        
+        // If we still have no results, try a broader search
+        logger.info(`No results found for "${trimmedQuery}", trying broader search...`);
+        
+        // Try searching with partial matches
+        const broaderResults = await tokenRepository.searchTokens(trimmedQuery.substring(0, 3), limit);
+        
+        if (broaderResults.length > 0) {
+            logger.info(`Found ${broaderResults.length} broader results for "${trimmedQuery}"`);
+            return res.json({
+                query: trimmedQuery,
+                total: broaderResults.length,
+                items: broaderResults
+            });
         }
         
         logger.info(`Token search completed. Query: "${trimmedQuery}", Results: 0`);
