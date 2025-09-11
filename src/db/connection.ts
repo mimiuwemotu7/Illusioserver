@@ -137,6 +137,29 @@ class DatabaseConnection {
             console.log('Ensuring database schema...');
             
             await this.transaction(async (client) => {
+                // Create tokens table if it doesn't exist
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS tokens (
+                        id SERIAL PRIMARY KEY,
+                        contract_address VARCHAR(255) UNIQUE NOT NULL,
+                        name VARCHAR(255),
+                        symbol VARCHAR(50),
+                        creator VARCHAR(255),
+                        source VARCHAR(50) DEFAULT 'pump',
+                        launch_time TIMESTAMP,
+                        decimals INT NOT NULL DEFAULT 0,
+                        supply BIGINT NOT NULL DEFAULT 0,
+                        blocktime TIMESTAMPTZ,
+                        status VARCHAR(50) DEFAULT 'fresh',
+                        metadata_uri TEXT,
+                        image_url TEXT,
+                        bonding_curve_address TEXT,
+                        is_on_curve BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+                
                 // Add missing columns if they don't exist
                 await client.query(`
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS name VARCHAR(255);
