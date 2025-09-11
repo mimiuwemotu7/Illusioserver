@@ -230,6 +230,19 @@ class DatabaseConnection {
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(255);
                 `);
                 
+                // Add unique constraints if they don't exist
+                await client.query(`
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint 
+                            WHERE conname = 'tokens_mint_unique'
+                        ) THEN
+                            ALTER TABLE tokens ADD CONSTRAINT tokens_mint_unique UNIQUE (mint);
+                        END IF;
+                    END $$;
+                `);
+                
                 // Update status values to match the database constraints
                 await client.query(`
                     ALTER TABLE tokens ALTER COLUMN status TYPE VARCHAR(50);
