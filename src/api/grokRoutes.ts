@@ -41,9 +41,10 @@ router.post('/analyze/:mint', async (req, res) => {
 router.post('/chat/:mint', async (req, res) => {
   try {
     const { mint } = req.params;
-    const { message } = req.body;
+    const { message, userMessage } = req.body;
+    const actualMessage = message || userMessage;
     
-    if (!message) {
+    if (!actualMessage) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
@@ -52,15 +53,15 @@ router.post('/chat/:mint', async (req, res) => {
       return res.status(404).json({ error: 'Token not found' });
     }
 
-    const response = await grokService.generateCompanionResponse(token, message);
+    const response = await grokService.generateCompanionResponse(token, actualMessage);
     
     if (!response) {
       return res.status(500).json({ error: 'Failed to generate response' });
     }
 
-    return res.json({ 
+    return     res.json({ 
       mint,
-      userMessage: message,
+      userMessage: actualMessage,
       companionResponse: response,
       token: {
         name: token.name,
@@ -78,9 +79,10 @@ router.post('/chat/:mint', async (req, res) => {
 // General chat (not token-specific)
 router.post('/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, userMessage } = req.body;
+    const actualMessage = message || userMessage;
     
-    if (!message) {
+    if (!actualMessage) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
@@ -91,7 +93,7 @@ router.post('/chat', async (req, res) => {
       },
       {
         role: 'user',
-        content: message
+        content: actualMessage
       }
     ]);
     
@@ -99,8 +101,8 @@ router.post('/chat', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate response' });
     }
 
-    return res.json({ 
-      userMessage: message,
+    return     res.json({ 
+      userMessage: actualMessage,
       companionResponse: response
     });
   } catch (error) {
