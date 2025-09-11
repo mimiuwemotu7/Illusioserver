@@ -141,6 +141,7 @@ class DatabaseConnection {
                 await client.query(`
                     CREATE TABLE IF NOT EXISTS tokens (
                         id SERIAL PRIMARY KEY,
+                        mint VARCHAR(255) UNIQUE NOT NULL,
                         contract_address VARCHAR(255) UNIQUE NOT NULL,
                         name VARCHAR(255),
                         symbol VARCHAR(50),
@@ -155,6 +156,22 @@ class DatabaseConnection {
                         image_url TEXT,
                         bonding_curve_address TEXT,
                         is_on_curve BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+                
+                // Create marketcaps table if it doesn't exist
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS marketcaps (
+                        id SERIAL PRIMARY KEY,
+                        mint VARCHAR(255) UNIQUE NOT NULL,
+                        price_usd DECIMAL(20,8),
+                        marketcap DECIMAL(20,2),
+                        volume_24h DECIMAL(20,2),
+                        liquidity DECIMAL(20,2),
+                        price_change_24h DECIMAL(10,4),
+                        last_updated TIMESTAMPTZ DEFAULT NOW(),
                         created_at TIMESTAMPTZ DEFAULT NOW(),
                         updated_at TIMESTAMPTZ DEFAULT NOW()
                     );
