@@ -52,7 +52,7 @@ export class GrokService {
         return null;
       }
 
-      const data: GrokResponse = await response.json();
+      const data = await response.json() as GrokResponse;
       
       if (data.choices && data.choices.length > 0) {
         return data.choices[0].message.content;

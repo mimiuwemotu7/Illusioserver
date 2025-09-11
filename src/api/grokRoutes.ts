@@ -21,19 +21,19 @@ router.post('/analyze/:mint', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate analysis' });
     }
 
-    res.json({ 
+    return res.json({ 
       mint,
       analysis,
       token: {
         name: token.name,
         symbol: token.symbol,
-        marketcap: token.marketcap,
-        price_usd: token.price_usd
+        mint: token.mint,
+        status: token.status
       }
     });
   } catch (error) {
     logger.error('Token analysis error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -58,20 +58,20 @@ router.post('/chat/:mint', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate response' });
     }
 
-    res.json({ 
+    return res.json({ 
       mint,
       userMessage: message,
       companionResponse: response,
       token: {
         name: token.name,
         symbol: token.symbol,
-        marketcap: token.marketcap,
-        price_usd: token.price_usd
+        mint: token.mint,
+        status: token.status
       }
     });
   } catch (error) {
     logger.error('Companion chat error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -99,13 +99,13 @@ router.post('/chat', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate response' });
     }
 
-    res.json({ 
+    return res.json({ 
       userMessage: message,
       companionResponse: response
     });
   } catch (error) {
     logger.error('General chat error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
