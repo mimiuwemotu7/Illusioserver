@@ -326,11 +326,11 @@ class DatabaseConnection {
                     END $$;
                 `);
                 
-                // Update source check constraint to allow 'helius'
+                // Update source check constraint to allow all sources
                 await client.query(`
                     ALTER TABLE tokens DROP CONSTRAINT IF EXISTS tokens_source_check;
                     ALTER TABLE tokens ADD CONSTRAINT tokens_source_check 
-                    CHECK (source IN ('pump', 'meteora', 'helius'));
+                    CHECK (source IN ('pump', 'meteora', 'helius', 'pump.fun'));
                 `);
                 
                 // Add new columns for metadata and bonding curve
