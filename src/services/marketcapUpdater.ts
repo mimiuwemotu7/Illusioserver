@@ -295,10 +295,13 @@ export class MarketcapUpdaterService {
             // Extract market data from the Market Data API response
             const marketData: MarketData = {
                 price_usd: tokenData.price || 0,
-                marketcap: tokenData.mc || tokenData.market_cap || 0, // Market cap from API
-                volume_24h: tokenData.v24hUSDChangePercent || tokenData.volume24h || 0, // 24h volume
-                liquidity: tokenData.liquidity || 0 // Liquidity from API
+                marketcap: tokenData.mc || tokenData.market_cap || tokenData.marketCap || 0, // Market cap from API
+                volume_24h: tokenData.v24hUSDChangePercent || tokenData.volume24h || tokenData.volume_24h || tokenData.v24hUSD || 0, // 24h volume
+                liquidity: tokenData.liquidity || tokenData.liquidityUSD || 0 // Liquidity from API
             };
+            
+            // Debug: Log all available fields from Birdeye response
+            logger.info(`🔍 BIRDEYE FIELDS for ${contractAddress}:`, Object.keys(tokenData));
             
             // If marketcap is 0, try to calculate it using price and supply
             if (marketData.marketcap === 0 && marketData.price_usd > 0) {
@@ -308,8 +311,14 @@ export class MarketcapUpdaterService {
             
             logger.info(`📊 EXTRACTED DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
             
-            logger.info(`✅ BIRDEYE SUCCESS for ${contractAddress}: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
-            return marketData;
+            // Only return data if we have meaningful values
+            if (marketData.price_usd > 0 || marketData.marketcap > 0 || marketData.volume_24h > 0) {
+                logger.info(`✅ BIRDEYE SUCCESS for ${contractAddress}: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
+                return marketData;
+            } else {
+                logger.warn(`⚠️ BIRDEYE DATA INSUFFICIENT for ${contractAddress}: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
+                return null;
+            }
             
         } catch (error: any) {
             if (error?.cause?.code === "ENOTFOUND") {
