@@ -380,6 +380,102 @@ class DatabaseConnection {
                     ADD CONSTRAINT tokens_status_check
                     CHECK (status IN ('fresh','active','curve'));
                 `);
+
+                // Create analytics tables
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        id SERIAL PRIMARY KEY,
+                        session_id VARCHAR(255) UNIQUE NOT NULL,
+                        ip_address INET,
+                        user_agent TEXT,
+                        country VARCHAR(100),
+                        city VARCHAR(100),
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        last_activity TIMESTAMPTZ DEFAULT NOW(),
+                        is_active BOOLEAN DEFAULT TRUE,
+                        total_page_views INTEGER DEFAULT 0,
+                        total_api_calls INTEGER DEFAULT 0
+                    );
+                `);
+
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS page_views (
+                        id SERIAL PRIMARY KEY,
+                        session_id VARCHAR(255) NOT NULL REFERENCES user_sessions(session_id) ON DELETE CASCADE,
+                        page_path VARCHAR(500) NOT NULL,
+                        page_title VARCHAR(500),
+                        referrer VARCHAR(500),
+                        view_duration INTEGER,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS api_calls (
+                        id SERIAL PRIMARY KEY,
+                        session_id VARCHAR(255) NOT NULL REFERENCES user_sessions(session_id) ON DELETE CASCADE,
+                        endpoint VARCHAR(500) NOT NULL,
+                        method VARCHAR(10) NOT NULL,
+                        response_time INTEGER,
+                        status_code INTEGER,
+                        error_message TEXT,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS feature_usage (
+                        id SERIAL PRIMARY KEY,
+                        session_id VARCHAR(255) NOT NULL REFERENCES user_sessions(session_id) ON DELETE CASCADE,
+                        feature_name VARCHAR(100) NOT NULL,
+                        action VARCHAR(100) NOT NULL,
+                        metadata JSONB,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS system_metrics (
+                        id SERIAL PRIMARY KEY,
+                        metric_name VARCHAR(100) NOT NULL,
+                        metric_value DECIMAL(20, 8),
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS realtime_analytics (
+                        id SERIAL PRIMARY KEY,
+                        metric_type VARCHAR(50) NOT NULL,
+                        value INTEGER NOT NULL,
+                        timestamp TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+
+                // Create indexes for analytics tables
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_user_sessions_last_activity ON user_sessions(last_activity DESC);
+                `);
+
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at DESC);
+                `);
+
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_api_calls_created_at ON api_calls(created_at DESC);
+                `);
+
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_feature_usage_created_at ON feature_usage(created_at DESC);
+                `);
+
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_system_metrics_created_at ON system_metrics(created_at DESC);
+                `);
+
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_realtime_analytics_timestamp ON realtime_analytics(timestamp DESC);
+                `);
             });
             
             console.log('Database schema ensured successfully');

@@ -240,18 +240,34 @@ router.get('/tokens', async (req: Request, res: Response) => {
     try {
         const timeRange = req.query.range as string || '24 hours';
         
+        // Convert time range to proper PostgreSQL interval format
+        let interval: string;
+        switch (timeRange) {
+            case 'day':
+                interval = '1 day';
+                break;
+            case 'week':
+                interval = '7 days';
+                break;
+            case 'month':
+                interval = '30 days';
+                break;
+            default:
+                interval = timeRange; // Assume it's already in correct format
+        }
+        
         // Tokens discovered in time range
         const tokensDiscovered = await db.query(`
             SELECT COUNT(*) as count
             FROM tokens 
-            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${timeRange}'
+            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${interval}'
         `);
         
         // Tokens by source
         const tokensBySource = await db.query(`
             SELECT source, COUNT(*) as count
             FROM tokens 
-            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${timeRange}'
+            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${interval}'
             GROUP BY source
             ORDER BY count DESC
         `);
@@ -260,7 +276,7 @@ router.get('/tokens', async (req: Request, res: Response) => {
         const tokensByStatus = await db.query(`
             SELECT status, COUNT(*) as count
             FROM tokens 
-            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${timeRange}'
+            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${interval}'
             GROUP BY status
             ORDER BY count DESC
         `);
@@ -269,7 +285,7 @@ router.get('/tokens', async (req: Request, res: Response) => {
         const recentTokens = await db.query(`
             SELECT mint, name, symbol, source, status, created_at
             FROM tokens 
-            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${timeRange}'
+            WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '${interval}'
             ORDER BY created_at DESC
             LIMIT 20
         `);
