@@ -359,7 +359,7 @@ export class TokenRepository {
             FROM tokens t
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
-                WHERE token_id = t.id How a
+                WHERE token_id = t.id
                 ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
