@@ -110,16 +110,28 @@ router.get('/search', async (req: Request, res: Response) => {
         
         const trimmedQuery = query.trim();
         
+        // Check if this looks like a specific token address (exact match)
+        const isLikelyAddress = /^[A-Za-z0-9]{32,44}$/.test(trimmedQuery);
+        
         // First, search in local database
         const localTokens = await tokenRepository.searchTokens(trimmedQuery, limit);
         
-        // If we found tokens in local database, return them
-        if (localTokens.length > 0) {
-            logger.info(`Token search completed. Query: "${trimmedQuery}", Results: ${localTokens.length}`);
+        // If we found tokens in local database, filter for exact matches if it looks like an address
+        let filteredTokens = localTokens;
+        if (isLikelyAddress && localTokens.length > 1) {
+            // For address-like queries, prioritize exact matches
+            filteredTokens = localTokens.filter(token => 
+                token.mint.toLowerCase() === trimmedQuery.toLowerCase()
+            );
+        }
+        
+        // If we found exact matches or it's not an address query, return them
+        if (filteredTokens.length > 0) {
+            logger.info(`Token search completed. Query: "${trimmedQuery}", Results: ${filteredTokens.length}`);
             return res.json({
                 query: trimmedQuery,
-                total: localTokens.length,
-                items: localTokens
+                total: filteredTokens.length,
+                items: filteredTokens
             });
         }
         
@@ -263,19 +275,25 @@ router.get('/search', async (req: Request, res: Response) => {
                 logger.error('Error checking Solana token:', error);
             }
         
-        // If we still have no results, try a broader search
-        logger.info(`No results found for "${trimmedQuery}", trying broader search...`);
+        // Only do broader search if the query looks like a partial name/symbol (not a specific address)
+        const isLikelyPartialSearch = trimmedQuery.length >= 4 && !isLikelyAddress && /^[A-Za-z]/.test(trimmedQuery);
         
-        // Try searching with partial matches
-        const broaderResults = await tokenRepository.searchTokens(trimmedQuery.substring(0, 3), limit);
-        
-        if (broaderResults.length > 0) {
-            logger.info(`Found ${broaderResults.length} broader results for "${trimmedQuery}"`);
-            return res.json({
-                query: trimmedQuery,
-                total: broaderResults.length,
-                items: broaderResults
-            });
+        if (isLikelyPartialSearch) {
+            logger.info(`No exact results for "${trimmedQuery}", trying broader search...`);
+            
+            // Try searching with partial matches only for name/symbol searches
+            // Use a longer substring to avoid too broad results
+            const minLength = Math.max(4, Math.floor(trimmedQuery.length * 0.7));
+            const broaderResults = await tokenRepository.searchTokens(trimmedQuery.substring(0, minLength), limit);
+            
+            if (broaderResults.length > 0) {
+                logger.info(`Found ${broaderResults.length} broader results for "${trimmedQuery}"`);
+                return res.json({
+                    query: trimmedQuery,
+                    total: broaderResults.length,
+                    items: broaderResults
+                });
+            }
         }
         
         logger.info(`Token search completed. Query: "${trimmedQuery}", Results: 0`);
