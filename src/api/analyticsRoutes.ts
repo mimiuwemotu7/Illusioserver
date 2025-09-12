@@ -16,10 +16,10 @@ router.post('/session', async (req: Request, res: Response) => {
         const analyticsService = AnalyticsService.getInstance();
         await analyticsService.trackSession(sessionId, ip || req.ip, userAgent || req.get('User-Agent'));
         
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error) {
         logger.error('Error tracking session:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -35,10 +35,10 @@ router.post('/pageview', async (req: Request, res: Response) => {
         const analyticsService = AnalyticsService.getInstance();
         await analyticsService.trackPageView(sessionId, pagePath, pageTitle, referrer);
         
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error) {
         logger.error('Error tracking page view:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -54,29 +54,29 @@ router.post('/feature', async (req: Request, res: Response) => {
         const analyticsService = AnalyticsService.getInstance();
         await analyticsService.trackFeatureUsage(sessionId, featureName, action, metadata);
         
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error) {
         logger.error('Error tracking feature usage:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 // POST /api/analytics/activity - Track general activity
 router.post('/activity', async (req: Request, res: Response) => {
     try {
-        const { sessionId, activityType, data } = req.body;
+        const { sessionId, activityType } = req.body;
         
         if (!sessionId || !activityType) {
             return res.status(400).json({ error: 'Session ID and activity type are required' });
         }
         
         const analyticsService = AnalyticsService.getInstance();
-        await analyticsService.trackActivity(sessionId, activityType, data);
+        await analyticsService.trackApiCall(sessionId, `/api/analytics/activity`, 'POST', undefined, 200, undefined);
         
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error) {
         logger.error('Error tracking activity:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
