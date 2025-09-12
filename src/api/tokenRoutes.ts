@@ -180,7 +180,7 @@ router.get('/search', async (req: Request, res: Response) => {
             }
             
             if (heliusApiKey && heliusRpcUrl) {
-                // Get token account info to verify it's a valid token
+                // Use getAsset to validate token and get metadata in one call
                 const response = await fetch(heliusRpcUrl, {
                     method: 'POST',
                     headers: {
@@ -188,96 +188,56 @@ router.get('/search', async (req: Request, res: Response) => {
                     },
                     body: JSON.stringify({
                         jsonrpc: '2.0',
-                        id: 1,
-                        method: 'getAccountInfo',
-                        params: [
-                            trimmedQuery,
-                            {
-                                encoding: 'jsonParsed'
-                            }
-                        ]
+                        id: 'get-asset',
+                        method: 'getAsset',
+                        params: { id: trimmedQuery }
                     })
                 });
                     
                     if (response.ok) {
                         const data: any = await response.json();
-                        const accountInfo = data.result?.value;
+                        const result = data.result;
                         
-                        if (accountInfo && accountInfo.data) {
-                            // Check if it's an SPL token mint
-                            if (accountInfo.data.program === 'spl-token') {
-                                const tokenData = accountInfo.data.parsed?.info;
-                                
-                                if (tokenData) {
-                                    try {
-                                        // Add token to database so it can be enriched
-                                        const newToken = await tokenRepository.createToken(
-                                            trimmedQuery,
-                                            tokenData.decimals || 9,
-                                            tokenData.supply || '0',
-                                            new Date(),
-                                            tokenData.name || 'Unknown Token',
-                                            tokenData.symbol || 'UNKNOWN',
-                                            undefined, // metadataUri - will be enriched
-                                            undefined, // imageUrl - will be enriched
-                                            undefined, // bondingCurveAddress
-                                            false,     // isOnCurve
-                                            'active'   // status
-                                        );
-                                        
-                                        logger.info(`Added Solana token to database: ${newToken.name} (${newToken.symbol})`);
-                                        
-                                        // Return the token from database (it will be enriched by background processes)
-                                        return res.json({
-                                            query: trimmedQuery,
-                                            total: 1,
-                                            items: [newToken]
-                                        });
-                                        
-                                    } catch (dbError) {
-                                        logger.error('Error adding token to database:', dbError);
-                                        
-                                        // Fallback to basic token object
-                                        const token = {
-                                            id: 0, // Temporary ID
-                                            name: tokenData.name || 'Unknown Token',
-                                            symbol: tokenData.symbol || 'UNKNOWN',
-                                            mint: trimmedQuery,
-                                            creator: tokenData.mintAuthority || null,
-                                            source: 'solana-rpc',
-                                            blocktime: null,
-                                            decimals: tokenData.decimals || 9,
-                                            supply: tokenData.supply || '0',
-                                            status: 'active' as const,
-                                            created_at: new Date(),
-                                            updated_at: new Date(),
-                                            display_name: tokenData.name || tokenData.symbol || 'Unknown Token',
-                                            price_usd: null,
-                                            marketcap: null,
-                                            volume_24h: null,
-                                            liquidity: null,
-                                            image_url: null,
-                                            metadata_uri: null
-                                        };
-                                        
-                                        logger.info(`Found valid Solana token: ${token.name} (${token.symbol})`);
-                                        
-                                        return res.json({
-                                            query: trimmedQuery,
-                                            total: 1,
-                                            items: [token]
-                                        });
-                                    }
-                                }
-                            }
+                        if (result && (result.content?.metadata?.name || result.content?.metadata?.token_standard?.name)) {
+                            // Token exists and has metadata
+                            const name = result.content?.metadata?.name ?? result.content?.metadata?.token_standard?.name;
+                            const symbol = result.content?.metadata?.symbol ?? result.content?.metadata?.token_standard?.symbol;
+                            const jsonUri = result.content?.json_uri;
+                            const image = result.content?.links?.image;
                             
-                            // If it's not an SPL token but looks like a valid Solana address, 
-                            // create a basic token object anyway (might be a custom token or wrapped token)
-                            if (accountInfo.data.program === 'system' || accountInfo.data.program === 'native') {
+                            try {
+                                // Add token to database with rich metadata
+                                const newToken = await tokenRepository.createToken(
+                                    trimmedQuery,
+                                    9, // Default decimals
+                                    '0', // Default supply
+                                    new Date(),
+                                    name || 'Unknown Token',
+                                    symbol || 'UNKNOWN',
+                                    jsonUri, // metadataUri
+                                    image, // imageUrl
+                                    undefined, // bondingCurveAddress
+                                    false,     // isOnCurve
+                                    'active'   // status
+                                );
+                                
+                                logger.info(`Added Solana token to database: ${newToken.name} (${newToken.symbol})`);
+                                
+                                // Return the token from database
+                                return res.json({
+                                    query: trimmedQuery,
+                                    total: 1,
+                                    items: [newToken]
+                                });
+                                
+                            } catch (dbError) {
+                                logger.error('Error adding token to database:', dbError);
+                                
+                                // Fallback to token object with rich metadata
                                 const token = {
                                     id: 0, // Temporary ID
-                                    name: 'Unknown Token',
-                                    symbol: 'UNKNOWN',
+                                    name: name || 'Unknown Token',
+                                    symbol: symbol || 'UNKNOWN',
                                     mint: trimmedQuery,
                                     creator: null,
                                     source: 'solana-rpc',
@@ -287,16 +247,16 @@ router.get('/search', async (req: Request, res: Response) => {
                                     status: 'active' as const,
                                     created_at: new Date(),
                                     updated_at: new Date(),
-                                    display_name: 'Unknown Token',
+                                    display_name: name || symbol || 'Unknown Token',
                                     price_usd: null,
                                     marketcap: null,
                                     volume_24h: null,
                                     liquidity: null,
-                                    image_url: null,
-                                    metadata_uri: null
+                                    image_url: image,
+                                    metadata_uri: jsonUri
                                 };
                                 
-                                logger.info(`Found Solana account (non-SPL): ${trimmedQuery}`);
+                                logger.info(`Found valid Solana token: ${token.name} (${token.symbol})`);
                                 
                                 return res.json({
                                     query: trimmedQuery,
