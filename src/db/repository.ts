@@ -156,6 +156,35 @@ export class TokenRepository {
                 LIMIT 1
             ) m ON true
             WHERE t.status = 'fresh' 
+            AND NOT (
+                UPPER(t.mint) LIKE '%CANDY%' OR
+                UPPER(t.mint) LIKE '%GUARD%' OR
+                UPPER(t.mint) LIKE '%METAPLEX%' OR
+                UPPER(t.mint) LIKE '%NFT%' OR
+                UPPER(t.mint) LIKE '%COLLECTION%' OR
+                UPPER(t.mint) LIKE '%MASTEREDITION%' OR
+                UPPER(t.mint) LIKE '%METADATA%' OR
+                UPPER(t.mint) LIKE '%DELEGATE%' OR
+                UPPER(t.mint) LIKE '%RECORD%' OR
+                UPPER(t.name) LIKE '%CANDY%' OR
+                UPPER(t.name) LIKE '%GUARD%' OR
+                UPPER(t.name) LIKE '%METAPLEX%' OR
+                UPPER(t.name) LIKE '%NFT%' OR
+                UPPER(t.name) LIKE '%COLLECTION%' OR
+                UPPER(t.name) LIKE '%MASTEREDITION%' OR
+                UPPER(t.name) LIKE '%METADATA%' OR
+                UPPER(t.name) LIKE '%DELEGATE%' OR
+                UPPER(t.name) LIKE '%RECORD%' OR
+                UPPER(t.symbol) LIKE '%CANDY%' OR
+                UPPER(t.symbol) LIKE '%GUARD%' OR
+                UPPER(t.symbol) LIKE '%METAPLEX%' OR
+                UPPER(t.symbol) LIKE '%NFT%' OR
+                UPPER(t.symbol) LIKE '%COLLECTION%' OR
+                UPPER(t.symbol) LIKE '%MASTEREDITION%' OR
+                UPPER(t.symbol) LIKE '%METADATA%' OR
+                UPPER(t.symbol) LIKE '%DELEGATE%' OR
+                UPPER(t.symbol) LIKE '%RECORD%'
+            )
             ORDER BY COALESCE(t.blocktime, t.created_at) DESC 
             LIMIT $1 OFFSET $2
         `;
@@ -180,6 +209,35 @@ export class TokenRepository {
                 LIMIT 1
             ) m ON true
             WHERE t.status = 'active'
+            AND NOT (
+                UPPER(t.mint) LIKE '%CANDY%' OR
+                UPPER(t.mint) LIKE '%GUARD%' OR
+                UPPER(t.mint) LIKE '%METAPLEX%' OR
+                UPPER(t.mint) LIKE '%NFT%' OR
+                UPPER(t.mint) LIKE '%COLLECTION%' OR
+                UPPER(t.mint) LIKE '%MASTEREDITION%' OR
+                UPPER(t.mint) LIKE '%METADATA%' OR
+                UPPER(t.mint) LIKE '%DELEGATE%' OR
+                UPPER(t.mint) LIKE '%RECORD%' OR
+                UPPER(t.name) LIKE '%CANDY%' OR
+                UPPER(t.name) LIKE '%GUARD%' OR
+                UPPER(t.name) LIKE '%METAPLEX%' OR
+                UPPER(t.name) LIKE '%NFT%' OR
+                UPPER(t.name) LIKE '%COLLECTION%' OR
+                UPPER(t.name) LIKE '%MASTEREDITION%' OR
+                UPPER(t.name) LIKE '%METADATA%' OR
+                UPPER(t.name) LIKE '%DELEGATE%' OR
+                UPPER(t.name) LIKE '%RECORD%' OR
+                UPPER(t.symbol) LIKE '%CANDY%' OR
+                UPPER(t.symbol) LIKE '%GUARD%' OR
+                UPPER(t.symbol) LIKE '%METAPLEX%' OR
+                UPPER(t.symbol) LIKE '%NFT%' OR
+                UPPER(t.symbol) LIKE '%COLLECTION%' OR
+                UPPER(t.symbol) LIKE '%MASTEREDITION%' OR
+                UPPER(t.symbol) LIKE '%METADATA%' OR
+                UPPER(t.symbol) LIKE '%DELEGATE%' OR
+                UPPER(t.symbol) LIKE '%RECORD%'
+            )
             ORDER BY m.marketcap DESC NULLS LAST
             LIMIT $1 OFFSET $2
         `;
@@ -204,6 +262,35 @@ export class TokenRepository {
                 LIMIT 1
             ) m ON true
             WHERE t.status = $1 
+            AND NOT (
+                UPPER(t.mint) LIKE '%CANDY%' OR
+                UPPER(t.mint) LIKE '%GUARD%' OR
+                UPPER(t.mint) LIKE '%METAPLEX%' OR
+                UPPER(t.mint) LIKE '%NFT%' OR
+                UPPER(t.mint) LIKE '%COLLECTION%' OR
+                UPPER(t.mint) LIKE '%MASTEREDITION%' OR
+                UPPER(t.mint) LIKE '%METADATA%' OR
+                UPPER(t.mint) LIKE '%DELEGATE%' OR
+                UPPER(t.mint) LIKE '%RECORD%' OR
+                UPPER(t.name) LIKE '%CANDY%' OR
+                UPPER(t.name) LIKE '%GUARD%' OR
+                UPPER(t.name) LIKE '%METAPLEX%' OR
+                UPPER(t.name) LIKE '%NFT%' OR
+                UPPER(t.name) LIKE '%COLLECTION%' OR
+                UPPER(t.name) LIKE '%MASTEREDITION%' OR
+                UPPER(t.name) LIKE '%METADATA%' OR
+                UPPER(t.name) LIKE '%DELEGATE%' OR
+                UPPER(t.name) LIKE '%RECORD%' OR
+                UPPER(t.symbol) LIKE '%CANDY%' OR
+                UPPER(t.symbol) LIKE '%GUARD%' OR
+                UPPER(t.symbol) LIKE '%METAPLEX%' OR
+                UPPER(t.symbol) LIKE '%NFT%' OR
+                UPPER(t.symbol) LIKE '%COLLECTION%' OR
+                UPPER(t.symbol) LIKE '%MASTEREDITION%' OR
+                UPPER(t.symbol) LIKE '%METADATA%' OR
+                UPPER(t.symbol) LIKE '%DELEGATE%' OR
+                UPPER(t.symbol) LIKE '%RECORD%'
+            )
             ORDER BY COALESCE(t.blocktime, t.created_at) DESC 
             LIMIT $2 OFFSET $3
         `;
@@ -215,6 +302,44 @@ export class TokenRepository {
         const query = `SELECT COUNT(*)::int AS count FROM tokens WHERE status = 'active'`;
         const result = await db.query(query);
         return result.rows[0]?.count || 0;
+    }
+
+    async deleteCandyMachineTokens(): Promise<number> {
+        const query = `
+            DELETE FROM tokens 
+            WHERE (
+                UPPER(mint) LIKE '%CANDY%' OR
+                UPPER(mint) LIKE '%GUARD%' OR
+                UPPER(mint) LIKE '%METAPLEX%' OR
+                UPPER(mint) LIKE '%NFT%' OR
+                UPPER(mint) LIKE '%COLLECTION%' OR
+                UPPER(mint) LIKE '%MASTEREDITION%' OR
+                UPPER(mint) LIKE '%METADATA%' OR
+                UPPER(mint) LIKE '%DELEGATE%' OR
+                UPPER(mint) LIKE '%RECORD%' OR
+                UPPER(name) LIKE '%CANDY%' OR
+                UPPER(name) LIKE '%GUARD%' OR
+                UPPER(name) LIKE '%METAPLEX%' OR
+                UPPER(name) LIKE '%NFT%' OR
+                UPPER(name) LIKE '%COLLECTION%' OR
+                UPPER(name) LIKE '%MASTEREDITION%' OR
+                UPPER(name) LIKE '%METADATA%' OR
+                UPPER(name) LIKE '%DELEGATE%' OR
+                UPPER(name) LIKE '%RECORD%' OR
+                UPPER(symbol) LIKE '%CANDY%' OR
+                UPPER(symbol) LIKE '%GUARD%' OR
+                UPPER(symbol) LIKE '%METAPLEX%' OR
+                UPPER(symbol) LIKE '%NFT%' OR
+                UPPER(symbol) LIKE '%COLLECTION%' OR
+                UPPER(symbol) LIKE '%MASTEREDITION%' OR
+                UPPER(symbol) LIKE '%METADATA%' OR
+                UPPER(symbol) LIKE '%DELEGATE%' OR
+                UPPER(symbol) LIKE '%RECORD%'
+            )
+        `;
+        const result = await db.query(query);
+        logger.info(`Deleted ${result.rowCount} candy machine/guard tokens from database`);
+        return result.rowCount || 0;
     }
 
 

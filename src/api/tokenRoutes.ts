@@ -77,6 +77,24 @@ router.get('/', async (_req: Request, res: Response) => {
     }
 });
 
+// DELETE /tokens/candy-machine - Clean up candy machine tokens
+router.delete('/candy-machine', async (_req: Request, res: Response) => {
+    try {
+        const deletedCount = await tokenRepository.deleteCandyMachineTokens();
+        
+        logger.info(`Cleaned up ${deletedCount} candy machine tokens`);
+        
+        return res.json({
+            message: `Successfully deleted ${deletedCount} candy machine tokens`,
+            deletedCount
+        });
+        
+    } catch (error) {
+        logger.error('Error cleaning up candy machine tokens:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // GET /tokens/search - Search tokens by name, symbol, or mint address
 router.get('/search', async (req: Request, res: Response) => {
     try {

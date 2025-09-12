@@ -213,6 +213,21 @@ export class MintWatcherService {
             'SUGARGLIDER', // Sugar glider variations
         ];
         
+        const candyMachinePatterns = [
+            'CANDY', // Candy machine tokens
+            'CANDY_GUARD', // Candy guard tokens
+            'CANDYGUARD', // Candy guard variations
+            'GUARD', // Guard tokens
+            'GUARD1', // Guard1 tokens
+            'METAPLEX', // Metaplex tokens
+            'NFT', // NFT related tokens
+            'COLLECTION', // Collection tokens
+            'MASTEREDITION', // Master edition tokens
+            'METADATA', // Metadata tokens
+            'DELEGATE', // Delegate tokens
+            'RECORD', // Token record tokens
+        ];
+        
         const otherUnwantedPatterns = [
             'LEND', // Lending tokens
             'BORROW', // Borrowing tokens
@@ -232,6 +247,7 @@ export class MintWatcherService {
         const upperMint = mint.toUpperCase();
         return jupiterPatterns.some(pattern => upperMint.includes(pattern)) ||
                sugarPatterns.some(pattern => upperMint.includes(pattern)) ||
+               candyMachinePatterns.some(pattern => upperMint.includes(pattern)) ||
                otherUnwantedPatterns.some(pattern => upperMint.includes(pattern));
     }
 
