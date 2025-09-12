@@ -117,9 +117,9 @@ const startServer = async () => {
         await mintWatcher.start();
         logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
         
-        // TEMPORARILY DISABLED - Fixing database issues
-        // await marketcapUpdater.start();
-        // logger.info('✅ Marketcap Updater: Rate-limited updates (60 RPM) every 10 seconds');
+        // Start marketcap updater service
+        await marketcapUpdater.start();
+        logger.info('✅ Marketcap Updater: Rate-limited updates (50 req/sec) every 3 seconds');
         
         // Start metadata enricher service
         await metadataEnricher.start();
@@ -143,7 +143,7 @@ const startServer = async () => {
         
         logger.info('🚀 Solana Mint Discovery System started successfully!');
         logger.info('🔍 Watching for new token mints via Helius WebSocket');
-        logger.info('💰 Tracking marketcap from Birdeye API (60 RPM rate limit, 10s updates)');
+        logger.info('💰 Tracking marketcap from Birdeye API (50 req/sec rate limit, 3s updates)');
         logger.info('📊 Tokens progress: fresh → curve → active (when migrating to AMM)');
 
                 // Railway handles port management automatically, no need to kill processes
