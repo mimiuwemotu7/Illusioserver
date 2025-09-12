@@ -6,7 +6,7 @@ import { MarketcapUpdaterService } from './services/marketcapUpdater';
 import { MetadataEnricherService } from './services/metadataEnricherService';
 import { TokenStatusUpdaterService } from './services/tokenStatusUpdater';
 import { HolderIndexer } from './services/holderIndexer';
-import { AnalyticsService } from './services/analyticsService';
+// import { AnalyticsService } from './services/analyticsService';
 import db from './db/connection';
 import { tokenRepository } from './db/repository';
 import { logger } from './utils/logger';
@@ -133,19 +133,10 @@ const startServer = async () => {
         holderIndexer.start();
         logger.info('✅ Holder Indexer: Indexing token holders every 2 minutes');
         
-        // Start analytics service
-        const analyticsService = AnalyticsService.getInstance();
-        await analyticsService.start();
-        logger.info('✅ Analytics Service: Tracking user activity and system metrics');
-        
-        // Check if admin dashboard file exists
-        const fs = require('fs');
-        const adminDashboardPath = './dist/public/admin-dashboard.html';
-        if (fs.existsSync(adminDashboardPath)) {
-            logger.info('✅ Admin Dashboard: File found and ready');
-        } else {
-            logger.warn('⚠️ Admin Dashboard: File not found at expected path');
-        }
+        // Analytics service temporarily disabled for Railway deployment
+        // const analyticsService = AnalyticsService.getInstance();
+        // await analyticsService.start();
+        // logger.info('✅ Analytics Service: Tracking user activity and system metrics');
         
         logger.info('🚀 Solana Mint Discovery System started successfully!');
         logger.info('🔍 Watching for new token mints via Helius WebSocket');
@@ -157,7 +148,7 @@ const startServer = async () => {
         server.listen(PORT, () => {
             logger.info(`🚀 Solana Mint Discovery System is running on port ${PORT}`);
             logger.info(`📊 API available at http://localhost:${PORT}`);
-            logger.info(`🔐 Admin Dashboard: http://localhost:${PORT}/admin/admin-dashboard.html`);
+            // logger.info(`🔐 Admin Dashboard: http://localhost:${PORT}/admin/admin-dashboard.html`);
             logger.info(`🐘 Database connection established`);
             logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
             logger.info(`💰 Active tokens: /api/tokens/active`);

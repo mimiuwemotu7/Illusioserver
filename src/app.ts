@@ -6,10 +6,10 @@ import { createServer } from 'http';
 import tokenRoutes from './api/tokenRoutes';
 import transactionRoutes from './api/transactionRoutes';
 import grokRoutes from './api/grokRoutes';
-import adminRoutes from './api/adminRoutes';
+// import adminRoutes from './api/adminRoutes';
 import { WebSocketService } from './api/websocket';
 import { logger } from './utils/logger';
-import { AnalyticsService } from './services/analyticsService';
+// import { AnalyticsService } from './services/analyticsService';
 
 dotenv.config();
 
@@ -61,7 +61,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files for admin dashboard
-app.use('/admin', express.static('public'));
+// app.use('/admin', express.static('public'));
 
 // Handle preflight requests
 app.options('*', (req, res) => {
@@ -69,29 +69,8 @@ app.options('*', (req, res) => {
     res.status(200).end();
 });
 
-// Analytics middleware
-const analyticsService = AnalyticsService.getInstance();
-
-app.use((req, res, next) => {
-    const startTime = Date.now();
-    const sessionId = req.headers['x-session-id'] as string || req.ip + '-' + Date.now();
-    
-    // Track session
-    analyticsService.trackSession(sessionId, req.ip, req.get('User-Agent'));
-    
-    // Track API call
-    res.on('finish', () => {
-        const responseTime = Date.now() - startTime;
-        analyticsService.trackApiCall(
-            sessionId,
-            req.path,
-            req.method,
-            responseTime,
-            res.statusCode,
-            res.statusCode >= 400 ? 'Error' : undefined
-        );
-    });
-    
+// Request logging middleware
+app.use((req, _res, next) => {
     logger.info(`${req.method} ${req.path}`, {
         method: req.method,
         path: req.path,
@@ -118,7 +97,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/grok', grokRoutes);
-app.use('/api/admin', adminRoutes);
+// app.use('/api/admin', adminRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {
