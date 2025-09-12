@@ -219,7 +219,7 @@ router.get('/', (_req: Request, res: Response) => {
         // API calls
         async function apiCall(endpoint) {
             try {
-                const response = await fetch(\`/api/admin\${endpoint}\`, {
+                const response = await fetch(\`https://server-production-d3da.up.railway.app/api/admin\${endpoint}\`, {
                     headers: {
                         'X-Admin-Key': adminKey
                     }
