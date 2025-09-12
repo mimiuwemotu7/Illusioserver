@@ -111,4 +111,47 @@ router.post('/chat', async (req, res) => {
   }
 });
 
+// Oracle Hub conversation endpoint
+router.post('/oracle/conversation', async (req, res) => {
+  try {
+    const { agent, context } = req.body;
+    
+    if (!agent) {
+      return res.status(400).json({ error: 'Agent is required' });
+    }
+
+    // Create a mock token for the oracle conversation
+    const mockToken = {
+      name: 'Oracle Market',
+      symbol: 'ORACLE',
+      mint: 'oracle-conversation',
+      status: 'active',
+      marketcap: null,
+      price_usd: null,
+      volume_24h: null,
+      liquidity: null
+    };
+
+    // Use the same system as token companions but for general oracle conversation
+    const response = await grokService.generateCompanionResponse(
+      mockToken, 
+      context || 'Continue the oracle conversation',
+      agent
+    );
+    
+    if (!response) {
+      return res.status(500).json({ error: 'Failed to generate oracle response' });
+    }
+
+    return res.json({ 
+      agent,
+      oracleResponse: response,
+      context: context || 'oracle conversation'
+    });
+  } catch (error) {
+    logger.error('Oracle conversation error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
