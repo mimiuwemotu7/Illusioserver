@@ -138,6 +138,15 @@ const startServer = async () => {
         await analyticsService.start();
         logger.info('✅ Analytics Service: Tracking user activity and system metrics');
         
+        // Check if admin dashboard file exists
+        const fs = require('fs');
+        const adminDashboardPath = './dist/public/admin-dashboard.html';
+        if (fs.existsSync(adminDashboardPath)) {
+            logger.info('✅ Admin Dashboard: File found and ready');
+        } else {
+            logger.warn('⚠️ Admin Dashboard: File not found at expected path');
+        }
+        
         logger.info('🚀 Solana Mint Discovery System started successfully!');
         logger.info('🔍 Watching for new token mints via Helius WebSocket');
         logger.info('💰 Tracking marketcap from Birdeye API (60 RPM rate limit, 10s updates)');
@@ -152,6 +161,9 @@ const startServer = async () => {
             logger.info(`🐘 Database connection established`);
             logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
             logger.info(`💰 Active tokens: /api/tokens/active`);
+            logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            logger.info(`🔑 Admin Key configured: ${process.env.ADMIN_KEY ? 'YES' : 'NO'}`);
+            logger.info(`🔗 Helius RPC configured: ${process.env.HELIUS_RPC_URL ? 'YES' : 'NO'}`);
         });
 
     } catch (error) {
