@@ -21,14 +21,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 5, // Optimized for faster updates while maintaining stability
-            min: 2,  // Keep some connections ready
-            idleTimeoutMillis: 30000, // 30 seconds
-            connectionTimeoutMillis: 8000, // Reduced to 8 seconds for faster connections
+            max: 15, // Increased for better concurrency handling
+            min: 3,  // Keep more connections ready
+            idleTimeoutMillis: 60000, // Increased to 60 seconds
+            connectionTimeoutMillis: 15000, // Increased to 15 seconds for stability
             allowExitOnIdle: false,
             // Add query timeout to prevent hanging queries
-            statement_timeout: 6000, // 6 second query timeout for speed
-            query_timeout: 6000, // 6 second query timeout for speed
+            statement_timeout: 30000, // Increased to 30 seconds for complex queries
+            query_timeout: 30000, // Increased to 30 seconds for complex queries
         });
 
         // Handle pool errors
@@ -67,7 +67,7 @@ class DatabaseConnection {
                 // Add timeout wrapper for individual queries
                 const queryPromise = this.executeQuery(text, params);
                 const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Query timeout')), 6000)
+                    setTimeout(() => reject(new Error('Query timeout')), 30000)
                 );
                 
                 const result = await Promise.race([queryPromise, timeoutPromise]);
@@ -152,14 +152,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 5, // Optimized for faster updates while maintaining stability
-            min: 2,  // Keep some connections ready
-            idleTimeoutMillis: 30000, // 30 seconds
-            connectionTimeoutMillis: 8000, // Reduced to 8 seconds for faster connections
+            max: 15, // Increased for better concurrency handling
+            min: 3,  // Keep more connections ready
+            idleTimeoutMillis: 60000, // Increased to 60 seconds
+            connectionTimeoutMillis: 15000, // Increased to 15 seconds for stability
             allowExitOnIdle: false,
             // Add query timeout to prevent hanging queries
-            statement_timeout: 6000, // 6 second query timeout for speed
-            query_timeout: 6000, // 6 second query timeout for speed
+            statement_timeout: 30000, // Increased to 30 seconds for complex queries
+            query_timeout: 30000, // Increased to 30 seconds for complex queries
         });
         
         console.log('Database pool recreated successfully');
@@ -179,6 +179,20 @@ class DatabaseConnection {
         } catch (error) {
             console.error('Database connection failed:', error);
             return false;
+        }
+    }
+
+    // Monitor database performance
+    public logPerformanceStats(): void {
+        const stats = this.getPoolStats();
+        console.log(`📊 DB Pool Stats: ${stats.totalCount} total, ${stats.idleCount} idle, ${stats.waitingCount} waiting`);
+        
+        if (stats.waitingCount > 5) {
+            console.warn(`⚠️ High database connection wait queue: ${stats.waitingCount} connections waiting`);
+        }
+        
+        if (stats.totalCount >= 14) { // Close to max of 15
+            console.warn(`⚠️ Database pool near capacity: ${stats.totalCount}/15 connections used`);
         }
     }
 

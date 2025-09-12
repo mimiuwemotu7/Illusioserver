@@ -64,8 +64,13 @@ export class AnalyticsService {
                     is_active = true
             `;
             await db.query(query, [sessionId, ipAddress, userAgent]);
-        } catch (error) {
-            logger.error('Error tracking session:', error);
+        } catch (error: any) {
+            // Don't log full error details for analytics to avoid spam
+            if (error.message?.includes('timeout')) {
+                logger.warn('Analytics session tracking timeout - skipping');
+            } else {
+                logger.error('Error tracking session:', error.message);
+            }
         }
     }
 
@@ -84,8 +89,12 @@ export class AnalyticsService {
                 SET total_page_views = total_page_views + 1, last_activity = CURRENT_TIMESTAMP
                 WHERE session_id = $1
             `, [sessionId]);
-        } catch (error) {
-            logger.error('Error tracking page view:', error);
+        } catch (error: any) {
+            if (error.message?.includes('timeout')) {
+                logger.warn('Analytics page view tracking timeout - skipping');
+            } else {
+                logger.error('Error tracking page view:', error.message);
+            }
         }
     }
 
@@ -104,8 +113,12 @@ export class AnalyticsService {
                 SET total_api_calls = total_api_calls + 1, last_activity = CURRENT_TIMESTAMP
                 WHERE session_id = $1
             `, [sessionId]);
-        } catch (error) {
-            logger.error('Error tracking API call:', error);
+        } catch (error: any) {
+            if (error.message?.includes('timeout')) {
+                logger.warn('Analytics API call tracking timeout - skipping');
+            } else {
+                logger.error('Error tracking API call:', error.message);
+            }
         }
     }
 
@@ -117,8 +130,12 @@ export class AnalyticsService {
                 VALUES ($1, $2, $3, $4)
             `;
             await db.query(query, [sessionId, featureName, action, JSON.stringify(metadata)]);
-        } catch (error) {
-            logger.error('Error tracking feature usage:', error);
+        } catch (error: any) {
+            if (error.message?.includes('timeout')) {
+                logger.warn('Analytics feature usage tracking timeout - skipping');
+            } else {
+                logger.error('Error tracking feature usage:', error.message);
+            }
         }
     }
 

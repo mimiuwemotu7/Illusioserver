@@ -482,12 +482,11 @@ export class TokenRepository {
         const query = `
             SELECT t.*, m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
-            LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
-                WHERE token_id = t.id
-                ORDER BY timestamp DESC 
-                LIMIT 1
-            ) m ON true
+            LEFT JOIN (
+                SELECT DISTINCT ON (token_id) token_id, price_usd, marketcap, volume_24h, liquidity
+                FROM marketcaps 
+                ORDER BY token_id, timestamp DESC
+            ) m ON m.token_id = t.id
             ORDER BY t.created_at DESC
         `;
         const result = await db.query(query);
@@ -622,13 +621,11 @@ export class MarketCapRepository {
             SELECT t.*, 
                    m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.timestamp as marketcap_timestamp
             FROM tokens t
-            LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp
+            LEFT JOIN (
+                SELECT DISTINCT ON (token_id) token_id, price_usd, marketcap, volume_24h, liquidity, timestamp
                 FROM marketcaps 
-                WHERE token_id = t.id 
-                ORDER BY timestamp DESC 
-                LIMIT 1
-            ) m ON true
+                ORDER BY token_id, timestamp DESC
+            ) m ON m.token_id = t.id
             WHERE t.mint = $1
         `;
         const result = await db.query(query, [mint]);
