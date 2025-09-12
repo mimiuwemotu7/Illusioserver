@@ -73,7 +73,7 @@ export class TokenRepository {
     }
 
     async findByMint(mint: string): Promise<Token | null> {
-        const query = 'SELECT * FROM tokens WHERE mint = $1';
+        const query = 'SELECT id, name, symbol, mint, creator, source, launch_time, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at, display_name, website, twitter, telegram FROM tokens WHERE mint = $1';
         const result = await db.query(query, [mint]);
         return result.rows[0] || null;
     }
@@ -292,7 +292,7 @@ export class TokenRepository {
 
     async getTokenByMint(mint: string): Promise<Token | null> {
         const { rows } = await db.query(
-            `SELECT * FROM tokens WHERE mint = $1`,
+            `SELECT id, name, symbol, mint, creator, source, launch_time, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at, display_name, website, twitter, telegram FROM tokens WHERE mint = $1`,
             [mint]
         );
         return rows.length > 0 ? rows[0] : null;
@@ -359,7 +359,7 @@ export class TokenRepository {
 
     async getTokensByStatus(status: 'fresh' | 'active' | 'curve'): Promise<Token[]> {
         const query = `
-            SELECT * FROM tokens 
+            SELECT id, name, symbol, mint, creator, source, launch_time, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at, display_name, website, twitter, telegram FROM tokens 
             WHERE status = $1 
             ORDER BY created_at DESC
         `;
@@ -482,7 +482,10 @@ export class MarketCapRepository {
 
     async findByMint(mint: string): Promise<TokenWithMarketCap | null> {
         const query = `
-            SELECT t.*, 
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, t.launch_time, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at, t.display_name, t.website, t.twitter, t.telegram,
                    m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.timestamp as marketcap_timestamp
             FROM tokens t
             LEFT JOIN LATERAL (
