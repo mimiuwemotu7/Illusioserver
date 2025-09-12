@@ -113,21 +113,44 @@ router.get('/search', async (req: Request, res: Response) => {
         // Check if this looks like a specific token address (exact match)
         const isLikelyAddress = /^[A-Za-z0-9]{32,44}$/.test(trimmedQuery);
         
-        // First, search in local database
-        const localTokens = await tokenRepository.searchTokens(trimmedQuery, limit);
+        // First, try exact match search in local database
+        let localTokens = await tokenRepository.searchTokens(trimmedQuery, limit);
+        logger.info(`Initial search for "${trimmedQuery}" returned ${localTokens.length} results`);
         
-        // If we found tokens in local database, filter for exact matches if it looks like an address
+        // If no results and it looks like an address, try exact mint search
+        if (localTokens.length === 0 && isLikelyAddress) {
+            logger.info(`No initial results for address "${trimmedQuery}", trying exact mint search...`);
+            try {
+                const exactToken = await tokenRepository.findTokenByMint(trimmedQuery);
+                if (exactToken) {
+                    localTokens = [exactToken];
+                    logger.info(`Found exact token match for "${trimmedQuery}"`);
+                } else {
+                    logger.info(`No exact token found for "${trimmedQuery}"`);
+                }
+            } catch (error) {
+                logger.error('Error searching for exact token:', error);
+            }
+        }
+        
+        // If we found tokens in local database, prioritize exact matches if it looks like an address
         let filteredTokens = localTokens;
-        if (isLikelyAddress && localTokens.length > 1) {
+        if (isLikelyAddress) {
             // For address-like queries, prioritize exact matches
-            filteredTokens = localTokens.filter(token => 
+            const exactMatches = localTokens.filter(token => 
                 token.mint.toLowerCase() === trimmedQuery.toLowerCase()
             );
+            
+            if (exactMatches.length > 0) {
+                // Return exact matches first
+                filteredTokens = exactMatches;
+            }
+            // If no exact matches, return all results (don't filter out partial matches)
         }
         
         // If we found exact matches or it's not an address query, return them
         if (filteredTokens.length > 0) {
-            logger.info(`Token search completed. Query: "${trimmedQuery}", Results: ${filteredTokens.length}`);
+            logger.info(`Token search completed. Query: "${trimmedQuery}", Results: ${filteredTokens.length} (${isLikelyAddress ? 'address' : 'name/symbol'} search)`);
             return res.json({
                 query: trimmedQuery,
                 total: filteredTokens.length,

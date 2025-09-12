@@ -111,6 +111,26 @@ export class TokenRepository {
         return result.rows;
     }
 
+    async findTokenByMint(mint: string): Promise<TokenWithMarketCap | null> {
+        const query = `
+            SELECT t.*, 
+                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            FROM tokens t
+            LEFT JOIN LATERAL (
+                SELECT * FROM marketcaps 
+                WHERE token_id = t.id 
+                ORDER BY last_updated DESC 
+                LIMIT 1
+            ) m ON true
+            WHERE LOWER(t.mint) = LOWER($1)
+            LIMIT 1
+        `;
+        
+        const result = await db.query(query, [mint]);
+        return result.rows[0] || null;
+    }
+
     async findFreshTokens(limit: number = 100, offset: number = 0): Promise<TokenWithMarketCap[]> {
         const query = `
             SELECT t.*, 
