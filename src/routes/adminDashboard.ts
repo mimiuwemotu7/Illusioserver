@@ -351,7 +351,12 @@ router.get('/', (_req: Request, res: Response) => {
         // API calls
         async function apiCall(endpoint) {
             try {
-                const response = await fetch(\`https://server-production-d3da.up.railway.app/api/admin\${endpoint}\`, {
+                // Use relative URL if accessed through proxy, otherwise use full URL
+                const baseUrl = window.location.hostname === 'www.illusio.xyz' 
+                    ? '/api/admin' 
+                    : 'https://server-production-d3da.up.railway.app/api/admin';
+                
+                const response = await fetch(\`\${baseUrl}\${endpoint}\`, {
                     headers: {
                         'X-Admin-Key': adminKey
                     }
