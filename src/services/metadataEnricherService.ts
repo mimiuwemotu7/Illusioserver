@@ -129,7 +129,7 @@ export class MetadataEnricherService {
     logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
     
     // ULTRA-FAST PROCESSING: Process in large parallel batches
-    const batchSize = 20; // Optimized batch size for faster processing
+    const batchSize = 50; // Increased batch size for faster processing
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
@@ -139,7 +139,7 @@ export class MetadataEnricherService {
       
       // Minimal delay between batches to avoid overwhelming the system
       if (i + batchSize < mints.length) {
-        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay between batches
+        await new Promise(resolve => setTimeout(resolve, 10)); // Reduced to 10ms delay between batches for faster processing
       }
     }
   }
