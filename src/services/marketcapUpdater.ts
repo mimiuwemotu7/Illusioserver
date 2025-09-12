@@ -244,20 +244,15 @@ export class MarketcapUpdaterService {
             
             logger.info(`🔍 FETCHING BIRDEYE DATA for ${contractAddress} (attempt ${retryCount + 1})`);
             
-            // Use the CORRECT endpoint for price AND volume data
-            logger.info(`🌐 MAKING BIRDEYE API CALL to: https://public-api.birdeye.so/defi/price_volume/multi`);
-            const response = await fetch(`https://public-api.birdeye.so/defi/price_volume/multi?ui_amount_mode=raw`, {
-                method: 'POST',
+            // Use the CORRECT endpoint for COMPLETE market data (price, volume, marketcap, liquidity)
+            logger.info(`🌐 MAKING BIRDEYE API CALL to: https://public-api.birdeye.so/defi/token_overview`);
+            const response = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${contractAddress}`, {
+                method: 'GET',
                 headers: { 
                     'X-API-KEY': this.birdeyeApiKey,
                     'accept': 'application/json',
-                    'content-type': 'application/json',
                     'x-chain': 'solana'
-                },
-                body: JSON.stringify({
-                    list_address: contractAddress,
-                    type: "24h"
-                })
+                }
             });
             
             logger.info(`📡 BIRDEYE API RESPONSE STATUS: ${response.status} ${response.statusText}`);
@@ -290,30 +285,23 @@ export class MarketcapUpdaterService {
                 return null;
             }
             
-            const tokenData = data.data[contractAddress];
+            const tokenData = data.data;
             
             if (!tokenData) {
                 logger.warn(`❌ No data found for token ${contractAddress} in Birdeye response`);
                 return null;
             }
             
-            // Extract market data from the price_volume endpoint response
+            // Extract market data from the token_overview endpoint response
             const marketData: MarketData = {
                 price_usd: tokenData.price || 0,
-                marketcap: 0, // This endpoint doesn't provide market cap, we'll calculate it
-                volume_24h: tokenData.volumeUSD || 0, // CORRECT FIELD NAME!
-                liquidity: 0 // This endpoint doesn't provide liquidity
+                marketcap: tokenData.marketCap || 0, // REAL MARKETCAP FROM API!
+                volume_24h: tokenData.v24hUSD || 0, // 24h volume in USD
+                liquidity: tokenData.liquidity || 0 // REAL LIQUIDITY FROM API!
             };
             
             // Debug: Log all available fields from Birdeye response
             logger.info(`🔍 BIRDEYE FIELDS for ${contractAddress}:`, Object.keys(tokenData));
-            
-            // Calculate market cap using price and supply (we'll need to get supply from token data)
-            // For now, we'll use a default supply calculation
-            const defaultSupply = 1000000000; // 1 billion tokens
-            if (marketData.price_usd > 0) {
-                marketData.marketcap = marketData.price_usd * defaultSupply;
-            }
             
             logger.info(`📊 EXTRACTED DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
             
