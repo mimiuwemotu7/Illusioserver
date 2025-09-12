@@ -88,8 +88,8 @@ export class MetadataEnricherService {
 
     logger.info("Starting Metadata Enricher Service...");
     
-    // Start cron job to enrich tokens every 5 seconds for fast metadata updates
-    this.cronJob = cron.schedule("*/5 * * * * *", async () => {
+    // Start cron job to enrich tokens every 2 seconds for ULTRA FAST metadata updates
+    this.cronJob = cron.schedule("*/2 * * * * *", async () => {
       try {
         await this.enrichTokens(50); // Prioritize 50 fresh tokens for speed
         await this.enrichSocialLinks(25); // Optimized batch size for social links
@@ -138,24 +138,24 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 Prioritizing ${freshMints.length} fresh tokens + ${otherMints.length} others = ${mints.length} total for metadata enrichment`);
     
-    // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with 10 DB connections
+    // ULTRA FAST PROCESSING: Process all tokens in parallel for maximum speed
     const poolStats = db.getPoolStats();
-    const maxConcurrentConnections = Math.max(6, Math.min(8, poolStats.idleCount)); // Dynamic sizing based on available connections
-    const batchSize = Math.min(maxConcurrentConnections, mints.length);
+    const maxConcurrentConnections = Math.max(8, Math.min(12, poolStats.idleCount)); // Increased concurrency
     
-    logger.debug(`📊 DB Pool: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting | Batch size: ${batchSize}`);
+    logger.debug(`📊 DB Pool: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting | Processing ${mints.length} tokens in parallel`);
     
-    for (let i = 0; i < mints.length; i += batchSize) {
-      const batch = mints.slice(i, i + batchSize);
-      
-      // Process batch in parallel for maximum speed
-      const promises = batch.map(mint => this.enrichToken(mint));
+    // Process all tokens in parallel with controlled concurrency
+    const chunks = [];
+    for (let i = 0; i < mints.length; i += maxConcurrentConnections) {
+      chunks.push(mints.slice(i, i + maxConcurrentConnections));
+    }
+    
+    for (const chunk of chunks) {
+      const promises = chunk.map(mint => this.enrichToken(mint));
       await Promise.allSettled(promises);
       
-      // NO delay between batches for ULTRA FAST processing
-      if (i + batchSize < mints.length) {
-        await new Promise(resolve => setTimeout(resolve, 1)); // Minimal 1ms delay between batches for ULTRA FAST processing
-      }
+      // No delay between chunks for maximum speed
+    }
     }
   }
 
