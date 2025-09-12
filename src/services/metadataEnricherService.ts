@@ -160,8 +160,8 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching social links for ${mints.length} tokens`);
     
-    // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with 10 DB connections
-    const poolStats = this.db.getPoolStats();
+    // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with DB connections
+    const poolStats = db.getPoolStats();
     const maxConcurrentConnections = Math.max(4, Math.min(6, poolStats.idleCount)); // Dynamic sizing based on available connections
     const batchSize = Math.min(maxConcurrentConnections, mints.length);
     
