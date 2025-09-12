@@ -346,7 +346,7 @@ router.get('/export', async (req: Request, res: Response) => {
 // Analytics endpoints for website tracking
 router.post('/pageview', async (req: Request, res: Response) => {
     try {
-        const { sessionId, pagePath, pageTitle, referrer, userAgent, timestamp } = req.body;
+        const { sessionId, pagePath, pageTitle, referrer, userAgent } = req.body;
         
         // Track session
         await analyticsService.trackSession(sessionId, req.ip, userAgent);
@@ -363,7 +363,7 @@ router.post('/pageview', async (req: Request, res: Response) => {
 
 router.post('/feature', async (req: Request, res: Response) => {
     try {
-        const { sessionId, featureName, action, metadata, timestamp } = req.body;
+        const { sessionId, featureName, action, metadata } = req.body;
         
         // Track feature usage
         await analyticsService.trackFeatureUsage(sessionId, featureName, action, metadata);
@@ -377,7 +377,7 @@ router.post('/feature', async (req: Request, res: Response) => {
 
 router.post('/session', async (req: Request, res: Response) => {
     try {
-        const { sessionId, userAgent, timestamp } = req.body;
+        const { sessionId, userAgent } = req.body;
         
         // Track session activity
         await analyticsService.trackSession(sessionId, req.ip, userAgent);
