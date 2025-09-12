@@ -87,11 +87,11 @@ export class MetadataEnricherService {
 
     logger.info("Starting Metadata Enricher Service...");
     
-    // Start cron job to enrich tokens every 2 seconds for faster processing
-    this.cronJob = cron.schedule("*/2 * * * * *", async () => {
+    // Start cron job to enrich tokens every 1 second for ULTRA FAST processing
+    this.cronJob = cron.schedule("*/1 * * * * *", async () => {
       try {
-        await this.enrichTokens(20); // Process 20 tokens at a time for faster enrichment
-        await this.enrichSocialLinks(10); // Process 10 tokens for social links
+        await this.enrichTokens(100); // Process 100 tokens at a time for ULTRA FAST enrichment
+        await this.enrichSocialLinks(50); // Process 50 tokens for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }
@@ -128,8 +128,8 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
     
-    // ULTRA-FAST PROCESSING: Process in large parallel batches
-    const batchSize = 50; // Increased batch size for faster processing
+    // ULTRA-FAST PROCESSING: Process in massive parallel batches
+    const batchSize = 100; // MASSIVE batch size for ULTRA FAST processing
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
@@ -137,9 +137,9 @@ export class MetadataEnricherService {
       const promises = batch.map(mint => this.enrichToken(mint));
       await Promise.allSettled(promises);
       
-      // Minimal delay between batches to avoid overwhelming the system
+      // NO delay between batches for ULTRA FAST processing
       if (i + batchSize < mints.length) {
-        await new Promise(resolve => setTimeout(resolve, 10)); // Reduced to 10ms delay between batches for faster processing
+        await new Promise(resolve => setTimeout(resolve, 1)); // Minimal 1ms delay between batches for ULTRA FAST processing
       }
     }
   }
