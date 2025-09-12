@@ -21,7 +21,13 @@ export function toHttp(uri?: string): string | undefined {
     return IPFS_GATEWAYS[0](path);
   }
   if (u.startsWith("ar://")) return arUrl(u.slice(5));
-  return u; // http(s) or data:
+  
+  // Convert HTTP URLs to HTTPS to prevent mixed content errors
+  if (u.startsWith("http://")) {
+    return u.replace(/^http:\/\//, 'https://');
+  }
+  
+  return u; // https or data:
 }
 
 function absolutize(img: string, base: string): string {
