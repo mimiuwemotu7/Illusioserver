@@ -26,8 +26,8 @@ class DatabaseConnection {
             idleTimeoutMillis: 60000, // Increased to 60 seconds
             connectionTimeoutMillis: 30000, // Increased to 30 seconds
             allowExitOnIdle: false,
-            acquireTimeoutMillis: 30000, // Add acquire timeout
-            statement_timeout: 30000, // Add statement timeout
+            // Note: acquireTimeoutMillis is not a valid PoolConfig property
+            // statement_timeout should be set per query, not in pool config
         });
 
         // Handle pool errors
@@ -121,8 +121,8 @@ class DatabaseConnection {
             idleTimeoutMillis: 60000, // Increased to 60 seconds
             connectionTimeoutMillis: 30000, // Increased to 30 seconds
             allowExitOnIdle: false,
-            acquireTimeoutMillis: 30000, // Add acquire timeout
-            statement_timeout: 30000, // Add statement timeout
+            // Note: acquireTimeoutMillis is not a valid PoolConfig property
+            // statement_timeout should be set per query, not in pool config
         });
         
         console.log('Database pool recreated successfully');
