@@ -144,6 +144,12 @@ export class MintWatcherService {
                 return;
             }
 
+            // Check if this is a candy machine transaction and skip it
+            if (this.isCandyMachineTransaction(tx)) {
+                logger.info(`🚫 Skipping candy machine transaction: ${mintInfo.mint}`);
+                return;
+            }
+
             // Save to database
             const newToken = await tokenRepository.createToken(
                 mintInfo.mint,
@@ -249,6 +255,78 @@ export class MintWatcherService {
                sugarPatterns.some(pattern => upperMint.includes(pattern)) ||
                candyMachinePatterns.some(pattern => upperMint.includes(pattern)) ||
                otherUnwantedPatterns.some(pattern => upperMint.includes(pattern));
+    }
+
+    private isCandyMachineTransaction(tx: any): boolean {
+        try {
+            // Check transaction logs for candy machine indicators
+            const logs = tx.meta?.logMessages || [];
+            const logText = logs.join(' ').toLowerCase();
+            
+            // Check for candy machine program indicators
+            const candyMachineIndicators = [
+                'candy machine',
+                'candy guard',
+                'metaplex',
+                'nft mint',
+                'master edition',
+                'collection delegate',
+                'token record',
+                'collection metadata',
+                'nft metadata'
+            ];
+            
+            const hasCandyMachineLogs = candyMachineIndicators.some(indicator => 
+                logText.includes(indicator)
+            );
+            
+            if (hasCandyMachineLogs) {
+                logger.debug(`🚫 Candy machine transaction detected via logs: ${logText.substring(0, 200)}...`);
+                return true;
+            }
+            
+            // Check account keys for candy machine patterns
+            const accountKeys = tx.transaction?.message?.accountKeys || [];
+            const accountKeysText = accountKeys.map((key: any) => key.toString()).join(' ').toLowerCase();
+            
+            // Check for known candy machine program IDs and patterns
+            const candyMachinePrograms = [
+                'cndy3', // Candy Machine Core Program
+                'guard1', // Candy Guard Program
+                'metaqbxx', // Metaplex Token Metadata Program
+                'p1exd', // Metaplex Candy Machine Program
+            ];
+            
+            const hasCandyMachinePrograms = candyMachinePrograms.some(program => 
+                accountKeysText.includes(program)
+            );
+            
+            if (hasCandyMachinePrograms) {
+                logger.debug(`🚫 Candy machine transaction detected via program IDs`);
+                return true;
+            }
+            
+            // Check instruction data for candy machine operations
+            const instructions = tx.transaction?.message?.instructions || [];
+            for (const instruction of instructions) {
+                if (instruction.programId) {
+                    const programId = instruction.programId.toString();
+                    // Known candy machine program IDs
+                    if (programId === 'cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ' || // Candy Machine Core
+                        programId === 'Guard1JwRhJkVH6XZhzoYxeBVQe872VH6QggF4BWmS9g' || // Candy Guard
+                        programId === 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' || // Token Metadata
+                        programId === 'p1exdMJcjVao65QdewkaZRUnU6VPSXhus9n2GzWfh98') { // Candy Machine
+                        logger.debug(`🚫 Candy machine transaction detected via instruction program: ${programId}`);
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            logger.error('Error checking candy machine transaction:', error);
+            return false;
+        }
     }
 
 
