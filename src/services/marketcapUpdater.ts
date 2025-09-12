@@ -18,7 +18,7 @@ export class MarketcapUpdaterService {
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
     private currentBatchIndex: number = 0; // Track which batch we're processing
-    private readonly RATE_LIMIT_MS = 1000; // 1 second between requests (60 RPM = 1 request per second)
+    private readonly RATE_LIMIT_MS = 2000; // 2 seconds between requests (30 RPM = 1 request per 2 seconds)
 
     constructor(birdeyeApiKey: string, wsService: WebSocketService) {
         this.birdeyeApiKey = birdeyeApiKey;
@@ -35,11 +35,11 @@ export class MarketcapUpdaterService {
             logger.info('🚀 Starting marketcap updater service...');
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
             
-            // Start the update loop (15 seconds to avoid rate limits)
+            // Start the update loop (30 seconds to avoid rate limits)
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 15000); // 15 seconds to avoid rate limits
+            }, 30000); // 30 seconds to avoid rate limits
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');
@@ -87,7 +87,7 @@ export class MarketcapUpdaterService {
             const otherTokens = targetTokens.filter(t => t.status !== 'fresh');
             
             // Process fresh tokens first, then other tokens in rotating batches
-            const batchSize = 15; // Smaller batches for faster processing
+            const batchSize = 10; // Smaller batches to avoid rate limits
             let tokensToProcess: any[] = [];
             
             // Always include fresh tokens (up to batch size)
@@ -255,7 +255,7 @@ export class MarketcapUpdaterService {
         }
     }
 
-    private async getBirdeyeMarketData(contractAddress: string): Promise<MarketData | null> {
+    private async getBirdeyeMarketData(contractAddress: string, retryCount: number = 0): Promise<MarketData | null> {
         try {
             if (!this.birdeyeApiKey) {
                 logger.warn('Birdeye API key not configured');
@@ -272,6 +272,13 @@ export class MarketcapUpdaterService {
             });
             
             if (!response.ok) {
+                if (response.status === 429 && retryCount < 3) {
+                    // Rate limited - wait and retry
+                    const waitTime = Math.pow(2, retryCount) * 2000; // Exponential backoff: 2s, 4s, 8s
+                    logger.warn(`Birdeye rate limited for ${contractAddress}, retrying in ${waitTime}ms (attempt ${retryCount + 1}/3)`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    return this.getBirdeyeMarketData(contractAddress, retryCount + 1);
+                }
                 logger.warn(`Birdeye API error for ${contractAddress}: ${response.status} ${response.statusText}`);
                 return null;
             }
