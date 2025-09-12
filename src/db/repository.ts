@@ -87,7 +87,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             WHERE (
@@ -120,7 +120,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             WHERE LOWER(t.mint) = LOWER($1)
@@ -140,7 +140,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             WHERE t.status = 'fresh' 
@@ -164,7 +164,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             WHERE t.status = 'active'
@@ -184,7 +184,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             WHERE t.status = $1 
@@ -344,7 +344,7 @@ export class TokenRepository {
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
-                ORDER BY last_updated DESC 
+                ORDER BY timestamp DESC 
                 LIMIT 1
             ) m ON true
             ORDER BY t.created_at DESC
@@ -453,7 +453,7 @@ export class MarketCapRepository {
         const query = `
             SELECT * FROM marketcaps 
             WHERE token_id = $1 
-            ORDER BY last_updated DESC 
+            ORDER BY timestamp DESC 
             LIMIT 1
         `;
         const result = await db.query(query, [tokenId]);
@@ -469,7 +469,7 @@ export class MarketCapRepository {
         const query = `
             SELECT * FROM marketcaps
             WHERE token_id = $1 
-            ORDER BY last_updated DESC 
+            ORDER BY timestamp DESC 
             LIMIT $2
         `;
         const result = await db.query(query, [tokenId, limit]);
