@@ -61,17 +61,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files for admin dashboard
-app.use('/admin', express.static('dist/public'));
-
-// Direct admin dashboard routes
-app.get('/admin', (_req, res) => {
-    res.sendFile('admin-dashboard.html', { root: 'dist/public' });
-});
-
-app.get('/admin-dashboard', (_req, res) => {
-    res.sendFile('admin-dashboard.html', { root: 'dist/public' });
-});
+// Admin dashboard is now served via the embedded route in adminDashboard.ts
 
 // Handle preflight requests
 app.options('*', (req, res) => {

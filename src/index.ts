@@ -138,14 +138,8 @@ const startServer = async () => {
         await analyticsService.start();
         logger.info('✅ Analytics Service: Tracking user activity and system metrics');
         
-        // Check if admin dashboard file exists
-        const fs = require('fs');
-        const adminDashboardPath = './dist/public/admin-dashboard.html';
-        if (fs.existsSync(adminDashboardPath)) {
-            logger.info('✅ Admin Dashboard: File found and ready');
-        } else {
-            logger.warn('⚠️ Admin Dashboard: File not found at expected path');
-        }
+        // Admin dashboard is now embedded in the route
+        logger.info('✅ Admin Dashboard: Embedded route ready');
         
         logger.info('🚀 Solana Mint Discovery System started successfully!');
         logger.info('🔍 Watching for new token mints via Helius WebSocket');
@@ -157,7 +151,7 @@ const startServer = async () => {
         server.listen(PORT, () => {
             logger.info(`🚀 Solana Mint Discovery System is running on port ${PORT}`);
             logger.info(`📊 API available at http://localhost:${PORT}`);
-            logger.info(`🔐 Admin Dashboard: http://localhost:${PORT}/admin/admin-dashboard.html`);
+            logger.info(`🔐 Admin Dashboard: http://localhost:${PORT}/admin-dashboard`);
             logger.info(`🐘 Database connection established`);
             logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
             logger.info(`💰 Active tokens: /api/tokens/active`);
