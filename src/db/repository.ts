@@ -148,13 +148,11 @@ export class TokenRepository {
                    COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
                    m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
-            LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+            LEFT JOIN (
+                SELECT DISTINCT ON (token_id) token_id, price_usd, marketcap, volume_24h, liquidity, timestamp
                 FROM marketcaps 
-                WHERE token_id = t.id 
-                ORDER BY timestamp DESC 
-                LIMIT 1
-            ) m ON true
+                ORDER BY token_id, timestamp DESC
+            ) m ON m.token_id = t.id
             WHERE t.status = 'fresh' 
             AND NOT (
                 UPPER(t.mint) LIKE '%CANDY%' OR

@@ -192,9 +192,16 @@ export class MintWatcherService {
                 
                 // Trigger immediate market cap update for fresh mint
                 try {
-                    // Note: This will be handled by the market cap updater service automatically
-                    // since it now prioritizes fresh mints in its update cycle
-                    logger.info(`📊 Fresh mint ${newToken.mint} will be prioritized for market cap update`);
+                    const marketcapUpdater = require('./marketcapUpdaterService').marketcapUpdaterService;
+                    if (marketcapUpdater) {
+                        // Trigger immediate marketcap update (non-blocking)
+                        marketcapUpdater.updateTokenMarketcapImmediately(newToken.mint, newToken.id).catch((error: any) => {
+                            logger.debug(`Immediate marketcap update failed for ${newToken.mint}:`, error);
+                        });
+                        logger.info(`📊 Fresh mint ${newToken.mint} queued for immediate market cap update`);
+                    } else {
+                        logger.info(`📊 Fresh mint ${newToken.mint} will be prioritized for market cap update`);
+                    }
                 } catch (error) {
                     logger.debug('Market cap updater service not available for immediate update');
                 }

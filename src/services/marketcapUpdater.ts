@@ -17,7 +17,7 @@ export class MarketcapUpdaterService {
     private requestQueue: Array<() => Promise<void>> = [];
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
-    private readonly RATE_LIMIT_MS = 10; // 10ms between requests (100 req/sec - optimized for Business plan)
+    private readonly RATE_LIMIT_MS = 5; // 5ms between requests (200 req/sec - optimized for fresh mints speed)
 
     constructor(birdeyeApiKey: string, wsService: WebSocketService) {
         this.birdeyeApiKey = birdeyeApiKey;
@@ -75,27 +75,28 @@ export class MarketcapUpdaterService {
         try {
             logger.info('🔄 Starting marketcap update cycle...');
             
-            // Get all tokens and process them in batches for continuous updates
-            // Get the 50 most recent fresh tokens that match the frontend display logic
+            // PRIORITY: Get the 50 most recent fresh tokens that match the frontend display logic
             // This ensures we update exactly what users see in the fresh mints column
-            const freshTokens = await tokenRepository.findFreshTokens(100, 0); // Get 100 most recent fresh tokens
+            const freshTokens = await tokenRepository.findFreshTokens(50, 0); // Get exactly 50 most recent fresh tokens
             
-            // Focus ONLY on fresh tokens for maximum speed
+            // Focus ONLY on fresh tokens for maximum speed and coverage
             const targetTokens = freshTokens;
             logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} fresh tokens`);
             
-            // Process ALL fresh tokens for maximum coverage
-            const tokensToProcess = targetTokens.slice(0, 100); // Process all 100 fresh tokens every cycle
+            // Process ALL 50 fresh tokens every cycle for maximum coverage
+            const tokensToProcess = targetTokens.slice(0, 50); // Process exactly 50 fresh tokens every cycle
             logger.info(`🚀 Processing ${tokensToProcess.length} fresh tokens every 2 seconds`);
             
-            // Log some sample tokens
+            // Log some sample tokens with their current marketcap status
             if (tokensToProcess.length > 0) {
-                logger.info(`📝 Sample tokens: ${tokensToProcess.slice(0, 3).map(t => t.mint).join(', ')}`);
+                const sampleTokens = tokensToProcess.slice(0, 3);
+                const sampleInfo = sampleTokens.map(t => `${t.mint.slice(0,8)}... (MC: ${(t as any).marketcap ? `$${(t as any).marketcap}` : 'N/A'})`).join(', ');
+                logger.info(`📝 Sample tokens: ${sampleInfo}`);
             }
             
             // Update target tokens with price data using rate-limited queue
             if (tokensToProcess.length > 0) {
-                logger.info(`🚀 Queuing ${tokensToProcess.length} tokens for marketcap updates (50 req/sec limit)`);
+                logger.info(`🚀 Queuing ${tokensToProcess.length} tokens for marketcap updates (200 req/sec limit)`);
                 
                 // Add all tokens to the rate-limited queue
                 tokensToProcess.forEach(token => {
@@ -152,6 +153,16 @@ export class MarketcapUpdaterService {
 
         this.isProcessingQueue = false;
         logger.info('Rate-limited queue processing completed');
+    }
+
+    // Immediate update for fresh mints (bypasses queue for speed)
+    public async updateTokenMarketcapImmediately(contractAddress: string, tokenId: number): Promise<void> {
+        try {
+            logger.info(`🚀 IMMEDIATE marketcap update for fresh mint: ${contractAddress}`);
+            await this.updateTokenMarketcap(contractAddress, tokenId);
+        } catch (error) {
+            logger.error(`❌ Immediate marketcap update failed for ${contractAddress}:`, error);
+        }
     }
 
     private async updateTokenMarketcap(contractAddress: string, tokenId: number): Promise<void> {
