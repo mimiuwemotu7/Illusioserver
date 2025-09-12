@@ -159,8 +159,14 @@ export class MarketcapUpdaterService {
             // Try to get market data from multiple sources
             let marketData: MarketData | null = null;
             
-            // Use ONLY Birdeye API for marketcap data
+            // Try Birdeye API first for comprehensive market data
             marketData = await this.getBirdeyeMarketData(contractAddress);
+            
+            // If Birdeye fails or returns no data, try Jupiter as fallback
+            if (!marketData || marketData.price_usd === 0) {
+                logger.info(`🔄 Birdeye failed for ${contractAddress}, trying Jupiter fallback...`);
+                marketData = await this.getJupiterMarketData(contractAddress);
+            }
             
             if (marketData) {
                 // Get previous marketcap data for price change detection
@@ -238,20 +244,15 @@ export class MarketcapUpdaterService {
             
             logger.info(`🔍 FETCHING BIRDEYE DATA for ${contractAddress} (attempt ${retryCount + 1})`);
             
-            // Use the CORRECT endpoint for price AND volume data
-            logger.info(`🌐 MAKING BIRDEYE API CALL to: https://public-api.birdeye.so/defi/price_volume/multi`);
-            const response = await fetch(`https://public-api.birdeye.so/defi/price_volume/multi?ui_amount_mode=raw`, {
-                method: 'POST',
+            // Use the CORRECT Market Data API endpoint for comprehensive data
+            logger.info(`🌐 MAKING BIRDEYE API CALL to: https://public-api.birdeye.so/defi/market_data`);
+            const response = await fetch(`https://public-api.birdeye.so/defi/market_data?address=${contractAddress}`, {
+                method: 'GET',
                 headers: { 
                     'X-API-KEY': this.birdeyeApiKey,
                     'accept': 'application/json',
-                    'content-type': 'application/json',
                     'x-chain': 'solana'
-                },
-                body: JSON.stringify({
-                    list_address: contractAddress,
-                    type: "24h"
-                })
+                }
             });
             
             logger.info(`📡 BIRDEYE API RESPONSE STATUS: ${response.status} ${response.statusText}`);
@@ -276,33 +277,34 @@ export class MarketcapUpdaterService {
             
             const data: any = await response.json();
             
+            // DEBUG: Log the actual Birdeye response structure
+            logger.info(`🔍 BIRDEYE RESPONSE STRUCTURE for ${contractAddress}:`, JSON.stringify(data, null, 2));
+            
             if (!data.success || !data.data) {
                 logger.debug(`No Birdeye data for ${contractAddress}: ${JSON.stringify(data)}`);
                 return null;
             }
             
-            const tokenData = data.data[contractAddress];
-            
-            // DEBUG: Log the actual Birdeye response structure
-            logger.info(`🔍 BIRDEYE RESPONSE STRUCTURE for ${contractAddress}:`, JSON.stringify(tokenData, null, 2));
+            const tokenData = data.data;
             
             if (!tokenData) {
                 logger.warn(`❌ No data found for token ${contractAddress} in Birdeye response`);
                 return null;
             }
             
-            // Extract market data from the price_volume endpoint response
+            // Extract market data from the Market Data API response
             const marketData: MarketData = {
                 price_usd: tokenData.price || 0,
-                marketcap: 0, // This endpoint doesn't provide market cap, we'll calculate it
-                volume_24h: tokenData.volumeUSD || 0, // CORRECT FIELD NAME!
-                liquidity: 0 // This endpoint doesn't provide liquidity
+                marketcap: tokenData.mc || tokenData.market_cap || 0, // Market cap from API
+                volume_24h: tokenData.v24hUSDChangePercent || tokenData.volume24h || 0, // 24h volume
+                liquidity: tokenData.liquidity || 0 // Liquidity from API
             };
             
-            // Calculate market cap using price and supply (we'll need to get supply from token data)
-            // For now, we'll use a default supply calculation
-            const defaultSupply = 1000000000; // 1 billion tokens
-            marketData.marketcap = marketData.price_usd * defaultSupply;
+            // If marketcap is 0, try to calculate it using price and supply
+            if (marketData.marketcap === 0 && marketData.price_usd > 0) {
+                const supply = tokenData.totalSupply || tokenData.supply || 1000000000; // Use actual supply or default
+                marketData.marketcap = marketData.price_usd * supply;
+            }
             
             logger.info(`📊 EXTRACTED DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
             
@@ -319,6 +321,54 @@ export class MarketcapUpdaterService {
         }
     }
 
+    private async getJupiterMarketData(contractAddress: string): Promise<MarketData | null> {
+        try {
+            logger.info(`🔍 FETCHING JUPITER DATA for ${contractAddress}`);
+            
+            // Use Jupiter's price API as fallback
+            const response = await fetch(`https://price.jup.ag/v4/price?ids=${contractAddress}`, {
+                method: 'GET',
+                headers: { 
+                    'accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                logger.debug(`Jupiter API failed for ${contractAddress}: ${response.status}`);
+                return null;
+            }
+            
+            const data: any = await response.json();
+            
+            if (!data.data || !data.data[contractAddress]) {
+                logger.debug(`No Jupiter data for ${contractAddress}`);
+                return null;
+            }
+            
+            const tokenData = data.data[contractAddress];
+            
+            // Jupiter only provides price, we'll calculate marketcap with default supply
+            const marketData: MarketData = {
+                price_usd: tokenData.price || 0,
+                marketcap: 0, // Will calculate below
+                volume_24h: 0, // Jupiter doesn't provide volume
+                liquidity: 0 // Jupiter doesn't provide liquidity
+            };
+            
+            // Calculate marketcap with default supply (1 billion tokens)
+            if (marketData.price_usd > 0) {
+                const defaultSupply = 1000000000; // 1 billion tokens
+                marketData.marketcap = marketData.price_usd * defaultSupply;
+            }
+            
+            logger.info(`📊 JUPITER DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}`);
+            return marketData;
+            
+        } catch (error: any) {
+            logger.debug(`Jupiter API failed for ${contractAddress}:`, error.message);
+            return null;
+        }
+    }
 
     private async checkAMMMigration(contractAddress: string, tokenId: number): Promise<void> {
         try {
