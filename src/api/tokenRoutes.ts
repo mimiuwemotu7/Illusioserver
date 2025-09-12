@@ -265,6 +265,11 @@ router.get('/search', async (req: Request, res: Response) => {
         } else {
             logger.warn('Helius API not configured, cannot check on-chain tokens');
         }
+        I SAID TO PUSH HERE FOR FUCK SAKE :
+
+        @https://github.com/IllusioAI/server.git         } catch (error) {
+            logger.error('Error checking Solana token:', error);
+        }
         
         // If we still have no results, try a broader search
         logger.info(`No results found for "${trimmedQuery}", trying broader search...`);
