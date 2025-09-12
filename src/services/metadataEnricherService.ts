@@ -329,7 +329,18 @@ export class MetadataEnricherService {
   
   // Helius fallback for tokens with invalid on-chain metadata - OPTIMIZED FOR SPEED
   private async tryHeliusFallback(mint: string): Promise<{ name?: string; symbol?: string; uri?: string; image?: string }> {
-    const apiKey = process.env.HELIUS_API_KEY || process.env.HELIUS_KEY || "";
+    // Try multiple sources for the API key
+    let apiKey = process.env.HELIUS_API_KEY || process.env.HELIUS_KEY || "";
+    
+    // If no direct API key, try to extract from RPC URL
+    if (!apiKey && process.env.HELIUS_RPC_URL) {
+      const urlMatch = process.env.HELIUS_RPC_URL.match(/api-key=([^&]+)/);
+      if (urlMatch) {
+        apiKey = urlMatch[1];
+        logger.debug("Extracted Helius API key from RPC URL");
+      }
+    }
+    
     if (!apiKey) {
       logger.warn("HELIUS_API_KEY not set; skipping fallback");
       return {};

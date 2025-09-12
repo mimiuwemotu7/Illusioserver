@@ -143,6 +143,77 @@ export class GrokService {
 
     return response;
   }
+
+  async analyzeRetrocausality(tokenData: any, holdersData: any[], transactionsData: any): Promise<string | null> {
+    const systemMessage: GrokMessage = {
+      role: 'system',
+      content: `You are a quantum finance oracle specializing in retrocausality analysis. Analyze token data to determine future-echo delta and scenario bias. 
+
+      Focus on:
+      - Holder distribution and concentration
+      - Market dynamics and liquidity patterns  
+      - Volume and price momentum indicators
+      
+      Return ONLY a JSON object with this exact structure:
+      {
+        "futureEchoDelta": "Strong|Medium|Weak",
+        "scenarioBias": "Bullish|Bearish|Neutral", 
+        "confidence": number (0-100),
+        "reasoning": "Brief explanation"
+      }`
+    };
+
+    // Calculate key metrics from holders data
+    const totalHolders = holdersData.length;
+    const topHolderConcentration = holdersData.length > 0 ? holdersData[0]?.amount || 0 : 0;
+    const avgHolderSize = holdersData.length > 0 ? holdersData.reduce((sum, h) => sum + (h.amount || 0), 0) / holdersData.length : 0;
+    
+    const userMessage: GrokMessage = {
+      role: 'user',
+      content: `Analyze this token for retrocausality patterns:
+
+      TOKEN DATA:
+      Name: ${tokenData.name || 'Unknown'}
+      Symbol: ${tokenData.symbol || 'Unknown'}
+      Market Cap: $${tokenData.marketcap || 'Unknown'}
+      Price: $${tokenData.price_usd || 'Unknown'}
+      Volume 24h: $${tokenData.latest_marketcap?.volume_24h || 'Unknown'}
+      Liquidity: $${tokenData.liquidity || 'Unknown'}
+      Status: ${tokenData.status || 'Unknown'}
+
+      HOLDERS DATA:
+      Total Holders: ${totalHolders}
+      Top Holder Amount: ${topHolderConcentration}
+      Average Holder Size: ${avgHolderSize}
+      Holder Distribution: ${holdersData.slice(0, 10).map(h => `${h.owner?.slice(0, 8)}... (${h.amount})`).join(', ')}
+
+      TRANSACTION DATA:
+      Volume: $${transactionsData.volume}
+      Activity: ${transactionsData.recentActivity}
+
+      Provide retrocausality analysis focusing on future market direction and scenario bias.`
+    };
+
+    const response = await this.chatCompletion([systemMessage, userMessage], 'grok-4-latest', 0.3);
+    
+    if (!response) {
+      return null;
+    }
+
+    // Try to parse JSON response, fallback to structured text if needed
+    try {
+      const parsed = JSON.parse(response);
+      return JSON.stringify(parsed);
+    } catch {
+      // If not valid JSON, return structured response
+      return JSON.stringify({
+        futureEchoDelta: "Weak",
+        scenarioBias: "Neutral", 
+        confidence: 50,
+        reasoning: "Unable to parse AI response"
+      });
+    }
+  }
 }
 
 export const grokService = new GrokService();

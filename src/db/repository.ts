@@ -476,6 +476,58 @@ export class MarketCapRepository {
         return result.rows;
     }
 
+    async findByMint(mint: string): Promise<TokenWithMarketCap | null> {
+        const query = `
+            SELECT t.*, 
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.timestamp as marketcap_timestamp
+            FROM tokens t
+            LEFT JOIN LATERAL (
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp
+                FROM marketcaps 
+                WHERE token_id = t.id 
+                ORDER BY timestamp DESC 
+                LIMIT 1
+            ) m ON true
+            WHERE t.mint = $1
+        `;
+        const result = await db.query(query, [mint]);
+        
+        if (result.rows.length === 0) {
+            return null;
+        }
+        
+        const row = result.rows[0];
+        return {
+            id: row.id,
+            name: row.name,
+            symbol: row.symbol,
+            mint: row.mint,
+            creator: row.creator,
+            source: row.source,
+            launch_time: row.launch_time,
+            decimals: row.decimals,
+            supply: row.supply,
+            blocktime: row.blocktime,
+            status: row.status,
+            metadata_uri: row.metadata_uri,
+            image_url: row.image_url,
+            bonding_curve_address: row.bonding_curve_address,
+            is_on_curve: row.is_on_curve,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            display_name: row.display_name,
+            latest_marketcap: row.marketcap_timestamp ? {
+                id: 0, // This would need to be properly set if we had the marketcap id
+                token_id: row.id,
+                price_usd: row.price_usd,
+                marketcap: row.marketcap,
+                volume_24h: row.volume_24h,
+                liquidity: row.liquidity,
+                timestamp: row.marketcap_timestamp
+            } : undefined
+        };
+    }
+
 }
 
 // Export singleton instances

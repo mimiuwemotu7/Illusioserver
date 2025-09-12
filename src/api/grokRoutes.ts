@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { grokService } from '../services/grokService';
 import { tokenRepository } from '../db/repository';
+import { TokenWithMarketCap } from '../db/types';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -150,6 +151,50 @@ router.post('/oracle/conversation', async (req, res) => {
     });
   } catch (error) {
     logger.error('Oracle conversation error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Retrocausality analysis endpoint
+router.post('/retrocausality/:mint', async (req, res) => {
+  try {
+    const { mint } = req.params;
+    
+    const token: TokenWithMarketCap | null = await tokenRepository.findByMint(mint);
+    if (!token) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    // Get holders data
+    const holdersData = await tokenRepository.getTopHolders(mint, 100);
+    
+    // For now, we'll use a simple placeholder for transaction data
+    // This can be enhanced when transaction tracking is implemented
+    const transactionsData = {
+      count: 0,
+      volume: token.latest_marketcap?.volume_24h || 0,
+      recentActivity: 'No transaction data available'
+    };
+
+    const analysis = await grokService.analyzeRetrocausality(token, holdersData, transactionsData);
+    
+    if (!analysis) {
+      return res.status(500).json({ error: 'Failed to generate retrocausality analysis' });
+    }
+
+    return res.json({ 
+      mint,
+      analysis,
+      timestamp: new Date().toISOString(),
+      token: {
+        name: token.name,
+        symbol: token.symbol,
+        mint: token.mint,
+        status: token.status
+      }
+    });
+  } catch (error) {
+    logger.error('Retrocausality analysis error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -163,8 +163,16 @@ router.get('/search', async (req: Request, res: Response) => {
         
         try {
             // Check if this is a valid token mint on Solana
-            const heliusApiKey = process.env.HELIUS_API_KEY;
+            let heliusApiKey = process.env.HELIUS_API_KEY;
             const heliusRpcUrl = process.env.HELIUS_RPC_URL;
+            
+            // If no direct API key, try to extract from RPC URL
+            if (!heliusApiKey && heliusRpcUrl) {
+                const urlMatch = heliusRpcUrl.match(/api-key=([^&]+)/);
+                if (urlMatch) {
+                    heliusApiKey = urlMatch[1];
+                }
+            }
             
             if (heliusApiKey && heliusRpcUrl) {
                 // Get token account info to verify it's a valid token

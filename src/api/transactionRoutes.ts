@@ -16,14 +16,23 @@ router.get('/:tokenMint', async (req: Request, res: Response) => {
         }
 
         // Get Helius API key from environment
-        const heliusApiKey = process.env.HELIUS_API_KEY;
+        let heliusApiKey = process.env.HELIUS_API_KEY;
+        const heliusRpcUrl = process.env.HELIUS_RPC_URL;
+        
+        // If no direct API key, try to extract from RPC URL
+        if (!heliusApiKey && heliusRpcUrl) {
+            const urlMatch = heliusRpcUrl.match(/api-key=([^&]+)/);
+            if (urlMatch) {
+                heliusApiKey = urlMatch[1];
+            }
+        }
+        
         if (!heliusApiKey) {
             logger.error('Helius API key not configured');
             return res.status(500).json({ error: 'Helius API key not configured' });
         }
 
         // Use Helius RPC to get recent transactions for the token
-        const heliusRpcUrl = process.env.HELIUS_RPC_URL;
         if (!heliusRpcUrl) {
             logger.error('Helius RPC URL not configured');
             return res.status(500).json({ error: 'Helius RPC URL not configured' });
