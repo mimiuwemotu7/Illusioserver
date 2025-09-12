@@ -16,28 +16,15 @@ router.get('/fresh', async (req: Request, res: Response) => {
             });
         }
 
-        // Get both fresh and curve tokens
-        const [freshTokens, curveTokens] = await Promise.all([
-            tokenRepository.findFreshTokens(limit, offset),
-            tokenRepository.findTokensByStatus('curve', limit, offset)
-        ]);
-        
-        // Combine and sort by blocktime
-        const allTokens = [...freshTokens, ...curveTokens]
-            .sort((a, b) => {
-                const aTime = a.blocktime || a.created_at;
-                const bTime = b.blocktime || b.created_at;
-                return new Date(bTime).getTime() - new Date(aTime).getTime();
-            })
-            .slice(0, limit);
-        
-        const total = freshTokens.length + curveTokens.length;
+        // Get ONLY fresh tokens - don't mix with curve tokens
+        const freshTokens = await tokenRepository.findFreshTokens(limit, offset);
+        const total = await tokenRepository.countFreshTokens();
         
         logger.info(`Fresh/curve tokens fetched successfully. Count: ${total}`);
         
         return res.json({
             total,
-            items: allTokens
+            items: freshTokens
         });
         
     } catch (error) {

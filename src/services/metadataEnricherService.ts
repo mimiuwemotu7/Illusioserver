@@ -87,11 +87,11 @@ export class MetadataEnricherService {
 
     logger.info("Starting Metadata Enricher Service...");
     
-    // Start cron job to enrich tokens every 5 seconds to avoid rate limits
-    this.cronJob = cron.schedule("*/5 * * * * *", async () => {
+    // Start cron job to enrich tokens every 2 seconds for faster processing
+    this.cronJob = cron.schedule("*/2 * * * * *", async () => {
       try {
-        await this.enrichTokens(10); // Process only 10 tokens at a time to avoid rate limits
-        await this.enrichSocialLinks(5); // Process 5 tokens for social links
+        await this.enrichTokens(20); // Process 20 tokens at a time for faster enrichment
+        await this.enrichSocialLinks(10); // Process 10 tokens for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }
@@ -128,8 +128,8 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
     
-    // BUSINESS PLAN OPTIMIZED: Process in massive parallel batches
-    const batchSize = 50; // Increased to 50 for maximum speed with 200 req/sec
+    // ULTRA-FAST PROCESSING: Process in large parallel batches
+    const batchSize = 20; // Optimized batch size for faster processing
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
@@ -137,8 +137,10 @@ export class MetadataEnricherService {
       const promises = batch.map(mint => this.enrichToken(mint));
       await Promise.allSettled(promises);
       
-      // NO DELAYS - Business plan allows 200 req/sec!
-      // Removed artificial delays for maximum speed
+      // Minimal delay between batches to avoid overwhelming the system
+      if (i + batchSize < mints.length) {
+        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay between batches
+      }
     }
   }
 
