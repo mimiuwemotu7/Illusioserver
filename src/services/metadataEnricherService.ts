@@ -128,17 +128,17 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
     
-    // Process in smaller batches to avoid rate limits
-    const batchSize = 1; // Further reduced to avoid 429 errors
+    // BUSINESS PLAN OPTIMIZED: Process in massive parallel batches
+    const batchSize = 50; // Increased to 50 for maximum speed with 200 req/sec
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
-      // Process batch sequentially to avoid rate limits
-      for (const mint of batch) {
-        await this.enrichToken(mint);
-        // Add delay between each token to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between tokens
-      }
+      // Process batch in parallel for maximum speed
+      const promises = batch.map(mint => this.enrichToken(mint));
+      await Promise.allSettled(promises);
+      
+      // NO DELAYS - Business plan allows 200 req/sec!
+      // Removed artificial delays for maximum speed
     }
   }
 
