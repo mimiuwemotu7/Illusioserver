@@ -31,6 +31,11 @@ export interface MarketCap {
 
 export interface TokenWithMarketCap extends Token {
     latest_marketcap?: MarketCap;
+    // Marketcap data at root level for consistency
+    price_usd?: number;
+    marketcap?: number;
+    volume_24h?: number;
+    liquidity?: number;
 }
 
 export interface PaginatedResponse<T> {
