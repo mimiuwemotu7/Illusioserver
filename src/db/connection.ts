@@ -164,15 +164,12 @@ class DatabaseConnection {
                 await client.query(`
                     CREATE TABLE IF NOT EXISTS marketcaps (
                         id SERIAL PRIMARY KEY,
-                        mint VARCHAR(255) UNIQUE NOT NULL,
-                        price_usd DECIMAL(20,8),
-                        marketcap DECIMAL(20,2),
-                        volume_24h DECIMAL(20,2),
-                        liquidity DECIMAL(20,2),
-                        price_change_24h DECIMAL(10,4),
-                        last_updated TIMESTAMPTZ DEFAULT NOW(),
-                        created_at TIMESTAMPTZ DEFAULT NOW(),
-                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                        token_id INTEGER NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
+                        price_usd DECIMAL(20, 8),
+                        marketcap DECIMAL(20, 2),
+                        volume_24h DECIMAL(20, 2),
+                        liquidity DECIMAL(20, 2),
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 `);
                 
