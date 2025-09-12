@@ -156,9 +156,7 @@ export class MetadataEnricherService {
       
       // No delay between chunks for maximum speed
     }
-    }
   }
-
   // Extract social links for tokens that already have metadata but missing social links
   async enrichSocialLinks(limit = 50) {
     const mints: string[] = await this.repo.findMintsNeedingSocialLinks(limit);
