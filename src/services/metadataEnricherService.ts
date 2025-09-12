@@ -88,11 +88,11 @@ export class MetadataEnricherService {
 
     logger.info("Starting Metadata Enricher Service...");
     
-    // Start cron job to enrich tokens every 1 second for ULTRA FAST processing
-    this.cronJob = cron.schedule("*/1 * * * * *", async () => {
+    // Start cron job to enrich tokens every 30 seconds to prevent database overload
+    this.cronJob = cron.schedule("*/30 * * * * *", async () => {
       try {
-        await this.enrichTokens(150); // Increased to 150 tokens for ULTRA FAST enrichment with optimized batching
-        await this.enrichSocialLinks(75); // Increased to 75 tokens for social links
+        await this.enrichTokens(50); // Reduced batch size to prevent DB overload
+        await this.enrichSocialLinks(25); // Reduced batch size for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }

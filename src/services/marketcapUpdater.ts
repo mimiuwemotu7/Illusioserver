@@ -36,11 +36,11 @@ export class MarketcapUpdaterService {
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
             logger.info(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             
-            // Start the update loop (optimized for faster market data updates)
+            // Start the update loop (reduced frequency to prevent DB overload)
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 3000); // 3 seconds - Faster updates for market cap and volume visibility
+            }, 30000); // 30 seconds - Reduced frequency to prevent database overload
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');

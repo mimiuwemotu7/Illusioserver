@@ -21,13 +21,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 10, // Reduced from 20 to prevent overwhelming Railway DB
-            min: 2,  // Reduced from 5
-            idleTimeoutMillis: 60000, // Increased to 60 seconds
-            connectionTimeoutMillis: 30000, // Increased to 30 seconds
+            max: 3, // Severely reduced for Railway stability
+            min: 1,  // Minimal connections
+            idleTimeoutMillis: 30000, // Reduced to 30 seconds
+            connectionTimeoutMillis: 10000, // Reduced to 10 seconds
             allowExitOnIdle: false,
-            // Note: acquireTimeoutMillis is not a valid PoolConfig property
-            // statement_timeout should be set per query, not in pool config
+            // Add query timeout to prevent hanging queries
+            statement_timeout: 8000, // 8 second query timeout
+            query_timeout: 8000, // 8 second query timeout
         });
 
         // Handle pool errors
@@ -58,20 +59,55 @@ class DatabaseConnection {
         };
     }
 
-    public async query(text: string, params?: any[]): Promise<any> {
+    public async query(text: string, params?: any[], maxRetries = 3): Promise<any> {
+        let lastError;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // Add timeout wrapper for individual queries
+                const queryPromise = this.executeQuery(text, params);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Query timeout')), 8000)
+                );
+                
+                const result = await Promise.race([queryPromise, timeoutPromise]);
+                return result;
+            } catch (error: any) {
+                lastError = error;
+                console.error(`Database query attempt ${attempt}/${maxRetries} failed:`, error.message);
+                
+                if (error.message?.includes('Cannot use a pool after calling end on the pool') || 
+                    error.message?.includes('timeout exceeded when trying to connect')) {
+                    
+                    if (attempt < maxRetries) {
+                        console.log(`Recreating database pool and retrying in ${attempt * 1000}ms...`);
+                        this.recreatePool();
+                        
+                        // Exponential backoff
+                        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                        continue;
+                    }
+                }
+                
+                // If it's the last attempt or not a connection error, throw immediately
+                if (attempt === maxRetries) {
+                    break;
+                }
+                
+                // Wait before retry for other errors
+                await new Promise(resolve => setTimeout(resolve, attempt * 500));
+            }
+        }
+        
+        throw lastError;
+    }
+
+    private async executeQuery(text: string, params?: any[]): Promise<any> {
         let client;
         try {
             client = await this.getClient();
             const result = await client.query(text, params);
             return result;
-        } catch (error: any) {
-            if (error.message?.includes('Cannot use a pool after calling end on the pool')) {
-                console.error('Database pool error detected, attempting to reconnect...');
-                // Recreate the pool if it's been closed
-                this.recreatePool();
-                throw new Error('Database connection lost, please retry');
-            }
-            throw error;
         } finally {
             if (client) {
                 client.release();
@@ -116,13 +152,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 10, // Reduced from 20 to prevent overwhelming Railway DB
-            min: 2,  // Reduced from 5
-            idleTimeoutMillis: 60000, // Increased to 60 seconds
-            connectionTimeoutMillis: 30000, // Increased to 30 seconds
+            max: 3, // Severely reduced for Railway stability
+            min: 1,  // Minimal connections
+            idleTimeoutMillis: 30000, // Reduced to 30 seconds
+            connectionTimeoutMillis: 10000, // Reduced to 10 seconds
             allowExitOnIdle: false,
-            // Note: acquireTimeoutMillis is not a valid PoolConfig property
-            // statement_timeout should be set per query, not in pool config
+            // Add query timeout to prevent hanging queries
+            statement_timeout: 8000, // 8 second query timeout
+            query_timeout: 8000, // 8 second query timeout
         });
         
         console.log('Database pool recreated successfully');
