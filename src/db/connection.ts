@@ -21,11 +21,13 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 20,
-            min: 5,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 5000,
+            max: 10, // Reduced from 20 to prevent overwhelming Railway DB
+            min: 2,  // Reduced from 5
+            idleTimeoutMillis: 60000, // Increased to 60 seconds
+            connectionTimeoutMillis: 30000, // Increased to 30 seconds
             allowExitOnIdle: false,
+            acquireTimeoutMillis: 30000, // Add acquire timeout
+            statement_timeout: 30000, // Add statement timeout
         });
 
         // Handle pool errors
@@ -105,11 +107,13 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 20,
-            min: 5,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 5000,
+            max: 10, // Reduced from 20 to prevent overwhelming Railway DB
+            min: 2,  // Reduced from 5
+            idleTimeoutMillis: 60000, // Increased to 60 seconds
+            connectionTimeoutMillis: 30000, // Increased to 30 seconds
             allowExitOnIdle: false,
+            acquireTimeoutMillis: 30000, // Add acquire timeout
+            statement_timeout: 30000, // Add statement timeout
         });
         
         console.log('Database pool recreated successfully');

@@ -171,7 +171,7 @@ export class MetadataEnricherService {
   }
 
   async enrichToken(mint: string) {
-    const maxRetries = 2; // Reduced from 3 to 2 for faster processing
+    const maxRetries = 3; // Increased back to 3 for better reliability
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         logger.debug(`🚀 ULTRA-FAST enriching metadata for ${mint} (attempt ${attempt}/${maxRetries})`);
@@ -240,12 +240,21 @@ export class MetadataEnricherService {
         logger.debug(`No metadata found for ${mint} via any method`);
         return;
 
-      } catch (error) {
+      } catch (error: any) {
         if (attempt === maxRetries) {
           logger.error(`Failed to enrich token ${mint} after ${maxRetries} attempts:`, error);
         } else {
-          logger.warn(`⚠️ Metadata enrichment failed for ${mint} (attempt ${attempt}/${maxRetries}), retrying...`);
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 500)); // Reduced retry delay
+          // Check if it's a database timeout error
+          const isDbTimeout = error.message?.includes('timeout exceeded when trying to connect') || 
+                             error.message?.includes('connection timeout');
+          
+          if (isDbTimeout) {
+            logger.warn(`⚠️ Database timeout for ${mint} (attempt ${attempt}/${maxRetries}), waiting longer before retry...`);
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000)); // Longer delay for DB timeouts
+          } else {
+            logger.warn(`⚠️ Metadata enrichment failed for ${mint} (attempt ${attempt}/${maxRetries}), retrying...`);
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 500)); // Normal retry delay
+          }
         }
       }
     }
