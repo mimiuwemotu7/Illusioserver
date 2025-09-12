@@ -116,17 +116,17 @@ const startServer = async () => {
         await mintWatcher.start();
         logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
         
-        // Start marketcap updater service
-        await marketcapUpdater.start();
-        logger.info('✅ Marketcap Updater: Rate-limited updates (60 RPM) every 10 seconds');
+        // TEMPORARILY DISABLED - Fixing database issues
+        // await marketcapUpdater.start();
+        // logger.info('✅ Marketcap Updater: Rate-limited updates (60 RPM) every 10 seconds');
         
         // Start metadata enricher service
         await metadataEnricher.start();
         logger.info('✅ Metadata Enricher: Enriching tokens every 5 seconds');
         
-        // Start token status updater service
-        await tokenStatusUpdater.start();
-        logger.info('✅ Token Status Updater: Moving tokens between categories every 10 seconds');
+        // TEMPORARILY DISABLED - Fixing database issues
+        // await tokenStatusUpdater.start();
+        // logger.info('✅ Token Status Updater: Moving tokens between categories every 10 seconds');
         
         // Start holder indexer service
         holderIndexer.start();

@@ -339,7 +339,11 @@ export class TokenRepository {
 
     async getAllTokens(): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.*, m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, t.launch_time, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at, t.display_name, t.website, t.twitter, t.telegram,
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
                 SELECT * FROM marketcaps 
