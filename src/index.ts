@@ -119,11 +119,11 @@ const startServer = async () => {
         
         // Start marketcap updater service
         await marketcapUpdater.start();
-        logger.info('✅ Marketcap Updater: Rate-limited updates (50 req/sec) every 3 seconds');
+        logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 2 seconds (100 fresh tokens)');
         
         // Start metadata enricher service
         await metadataEnricher.start();
-        logger.info('✅ Metadata Enricher: Enriching tokens every 5 seconds');
+        logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
         
         // TEMPORARILY DISABLED - Fixing database issues
         // await tokenStatusUpdater.start();
@@ -131,7 +131,7 @@ const startServer = async () => {
         
         // Start holder indexer service
         holderIndexer.start();
-        logger.info('✅ Holder Indexer: Indexing token holders every 2 minutes');
+        logger.info('✅ Holder Indexer: ULTRA-FAST holder indexing every 30 seconds (50 fresh tokens)');
         
         // Start analytics service
         const analyticsService = AnalyticsService.getInstance();

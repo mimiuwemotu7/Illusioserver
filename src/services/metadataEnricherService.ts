@@ -6,6 +6,19 @@ import { Connection } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import * as cron from "node-cron";
 
+// Import wsService dynamically to avoid circular dependency
+let wsService: any = null;
+const getWsService = () => {
+    if (!wsService) {
+        try {
+            wsService = require('../app').wsService;
+        } catch (error) {
+            console.warn('WebSocket service not available:', error);
+        }
+    }
+    return wsService;
+};
+
 const clean = (s?: string | null) => (s && s.trim() ? s.trim() : undefined);
 
 const isUnwantedToken = (name?: string, symbol?: string): boolean => {
@@ -91,8 +104,8 @@ export class MetadataEnricherService {
     // Start cron job to enrich tokens every 2 seconds for ULTRA FAST metadata updates
     this.cronJob = cron.schedule("*/2 * * * * *", async () => {
       try {
-        await this.enrichTokens(50); // Prioritize 50 fresh tokens for speed
-        await this.enrichSocialLinks(25); // Optimized batch size for social links
+        await this.enrichTokens(100); // Prioritize 100 fresh tokens for speed
+        await this.enrichSocialLinks(50); // Increased batch size for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }
@@ -232,6 +245,15 @@ export class MetadataEnricherService {
             
             await this.repo.updateTokenMetadataByMint(mint, update);
             logger.info(`✅ ULTRA-FAST metadata enriched: ${nm || 'Unknown'} (${sy || 'Unknown'})`);
+            
+            // Broadcast metadata update via WebSocket
+            const ws = getWsService();
+            if (ws) {
+              const updatedToken = await this.repo.findByMint(mint);
+              if (updatedToken) {
+                ws.broadcastTokenUpdate(updatedToken);
+              }
+            }
           }
 
           // Try to get additional data in parallel (non-blocking)

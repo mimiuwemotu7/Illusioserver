@@ -3,6 +3,19 @@ import { TokenRepository } from "../db/repository";
 import { logger } from "../utils/logger";
 import * as cron from "node-cron";
 
+// Import wsService dynamically to avoid circular dependency
+let wsService: any = null;
+const getWsService = () => {
+    if (!wsService) {
+        try {
+            wsService = require('../app').wsService;
+        } catch (error) {
+            console.warn('WebSocket service not available:', error);
+        }
+    }
+    return wsService;
+};
+
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 
@@ -17,10 +30,10 @@ export class HolderIndexer {
 
   start() {
     if (this.running) return;
-    // every 2 minutes; adjust as you like
-    this.cronJob = cron.schedule("*/2 * * * *", async () => {
+    // every 30 seconds for ULTRA FAST holder updates
+    this.cronJob = cron.schedule("*/30 * * * * *", async () => {
       try {
-        await this.indexSome(20); // snapshot 20 mints per tick
+        await this.indexSome(50); // snapshot 50 fresh mints per tick
       } catch (e) {
         logger.error("holder indexer tick error", e);
       }
@@ -38,9 +51,9 @@ export class HolderIndexer {
 
   // Grab a set of mints you care about (fresh/active/recent)
   private async pickMints(limit = 50): Promise<string[]> {
-    // reuse whatever you already have; as an example:
-    return await this.repo.findRecentActiveMints?.(limit)
-      ?? await this.repo.findMintsNeedingMetadata(limit); // fallback
+    // Prioritize fresh tokens for holder indexing
+    const freshTokens = await this.repo.findFreshTokens(limit, 0);
+    return freshTokens.map(t => t.mint);
   }
 
   async indexSome(limit = 50) {
@@ -51,7 +64,7 @@ export class HolderIndexer {
       await this.snapshotHolders(mint).catch(e =>
         logger.warn(`holders snapshot failed for ${mint}: ${String(e)}`)
       );
-      await new Promise(r => setTimeout(r, 150)); // small pacing
+      await new Promise(r => setTimeout(r, 50)); // faster pacing for fresh tokens
     }
   }
 
@@ -87,6 +100,15 @@ export class HolderIndexer {
 
     await this.repo.upsertTokenHoldersByMint(mintStr, rows);
     logger.debug(`holders snapshot for ${mintStr}: ${rows.length} holders`);
+    
+    // Broadcast holder update via WebSocket
+    const ws = getWsService();
+    if (ws) {
+      const updatedToken = await this.repo.findByMint(mintStr);
+      if (updatedToken) {
+        ws.broadcastTokenUpdate(updatedToken);
+      }
+    }
   }
 
   private async queryHoldersFromProgram(programId: PublicKey, mintStr: string) {

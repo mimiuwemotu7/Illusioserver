@@ -39,7 +39,7 @@ export class MarketcapUpdaterService {
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 5000); // 5 seconds - Back to fast updates for Business plan
+            }, 2000); // 2 seconds - ULTRA FAST updates for fresh mints
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');
@@ -78,18 +78,15 @@ export class MarketcapUpdaterService {
             // Get all tokens and process them in batches for continuous updates
             // Get the 50 most recent fresh tokens that match the frontend display logic
             // This ensures we update exactly what users see in the fresh mints column
-            const freshTokens = await tokenRepository.findFreshTokens(50, 0); // Get 50 most recent fresh tokens
+            const freshTokens = await tokenRepository.findFreshTokens(100, 0); // Get 100 most recent fresh tokens
             
-            // Also get some active tokens for variety (20 tokens)
-            const activeTokens = await tokenRepository.getTokensByStatus('active');
-            const recentActiveTokens = activeTokens.slice(0, 20);
+            // Focus ONLY on fresh tokens for maximum speed
+            const targetTokens = freshTokens;
+            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} fresh tokens`);
             
-            const targetTokens = [...freshTokens, ...recentActiveTokens];
-            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} (${freshTokens.length} fresh, ${recentActiveTokens.length} active)`);
-            
-            // Process the optimized token list (50 fresh + 20 active = 70 total)
-            const tokensToProcess = targetTokens.slice(0, 70); // Process all 70 tokens every cycle
-            logger.info(`🚀 Processing ${tokensToProcess.length} tokens (50 fresh + 20 active) every 5 seconds`);
+            // Process ALL fresh tokens for maximum coverage
+            const tokensToProcess = targetTokens.slice(0, 100); // Process all 100 fresh tokens every cycle
+            logger.info(`🚀 Processing ${tokensToProcess.length} fresh tokens every 2 seconds`);
             
             // Log some sample tokens
             if (tokensToProcess.length > 0) {
