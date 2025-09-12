@@ -18,7 +18,7 @@ export class MarketcapUpdaterService {
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
     private currentBatchIndex: number = 0; // Track which batch we're processing
-    private readonly RATE_LIMIT_MS = 50; // 50ms between requests (200 req/sec with Business plan)
+    private readonly RATE_LIMIT_MS = 20; // 20ms between requests (50 req/sec - optimized for faster updates)
 
     constructor(birdeyeApiKey: string, wsService: WebSocketService) {
         this.birdeyeApiKey = birdeyeApiKey;
@@ -34,12 +34,13 @@ export class MarketcapUpdaterService {
         try {
             logger.info('🚀 Starting marketcap updater service...');
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
+            logger.info(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             
-            // Start the update loop (30 seconds to avoid rate limits)
+            // Start the update loop (optimized for faster market data updates)
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 5000); // 5 seconds - Business plan allows much faster updates
+            }, 3000); // 3 seconds - Faster updates for market cap and volume visibility
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');
@@ -87,7 +88,7 @@ export class MarketcapUpdaterService {
             const otherTokens = targetTokens.filter(t => t.status !== 'fresh');
             
             // Process fresh tokens first, then other tokens in rotating batches
-            const batchSize = 50; // Larger batches with Business plan (200 req/sec)
+            const batchSize = 75; // Optimized batch size for faster market data updates
             let tokensToProcess: any[] = [];
             
             // Always include fresh tokens (up to batch size)
@@ -116,7 +117,7 @@ export class MarketcapUpdaterService {
             
             // Update target tokens with price data using rate-limited queue
             if (tokensToProcess.length > 0) {
-                logger.info(`🚀 Queuing ${tokensToProcess.length} tokens for marketcap updates (60 RPM limit)`);
+                logger.info(`🚀 Queuing ${tokensToProcess.length} tokens for marketcap updates (50 req/sec limit)`);
                 
                 // Add all tokens to the rate-limited queue
                 tokensToProcess.forEach(token => {
@@ -201,7 +202,7 @@ export class MarketcapUpdaterService {
                         marketData.volume_24h,
                         marketData.liquidity
                     );
-                    logger.info(`✅ Saved marketcap data for ${contractAddress}: $${marketData.marketcap}`);
+                    logger.info(`💾 SAVED MARKET DATA for ${contractAddress}: MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}, Price: $${marketData.price_usd}`);
                 } catch (saveError: any) {
                     // Check if it's a database connection error
                     if (saveError.message && saveError.message.includes('pool')) {
@@ -262,11 +263,12 @@ export class MarketcapUpdaterService {
                 return null;
             }
             
-            logger.debug(`Fetching Birdeye data for ${contractAddress}`);
-            const response = await fetch(`https://public-api.birdeye.so/defi/price?address=${contractAddress}&ui_amount_mode=raw`, {
+            logger.info(`🔍 FETCHING BIRDEYE DATA for ${contractAddress} (attempt ${retryCount + 1})`);
+            
+            // Try the comprehensive token overview endpoint first
+            let response = await fetch(`https://public-api.birdeye.so/public/v1/token/overview?address=${contractAddress}`, {
                 headers: { 
                     'X-API-KEY': this.birdeyeApiKey,
-                    'x-chain': 'solana',
                     'accept': 'application/json'
                 }
             });
@@ -279,8 +281,24 @@ export class MarketcapUpdaterService {
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                     return this.getBirdeyeMarketData(contractAddress, retryCount + 1);
                 }
-                logger.warn(`Birdeye API error for ${contractAddress}: ${response.status} ${response.statusText}`);
+                
+                // If overview endpoint fails, try the price endpoint as fallback
+                if (response.status === 404 || response.status >= 500) {
+                    logger.debug(`Overview endpoint failed for ${contractAddress}, trying price endpoint as fallback`);
+                    response = await fetch(`https://public-api.birdeye.so/defi/price?address=${contractAddress}&ui_amount_mode=raw`, {
+                        headers: { 
+                            'X-API-KEY': this.birdeyeApiKey,
+                            'x-chain': 'solana',
+                            'accept': 'application/json'
+                        }
+                    });
+                }
+                
+                if (!response.ok) {
+                logger.error(`❌ BIRDEYE API ERROR for ${contractAddress}: ${response.status} ${response.statusText}`);
+                logger.error(`❌ Response body: ${await response.text()}`);
                 return null;
+                }
             }
             
             const data: any = await response.json();
@@ -290,20 +308,33 @@ export class MarketcapUpdaterService {
                 return null;
             }
             
-            // Calculate marketcap using price and total supply
-            // For now, we'll use a default supply of 1 billion tokens
-            // In a real implementation, you'd fetch the actual total supply from the token
-            const defaultSupply = 1000000000; // 1 billion tokens
-            const calculatedMarketcap = data.data.value * defaultSupply;
+            const tokenData = data.data;
             
-            const marketData = {
-                price_usd: data.data.value,
-                marketcap: calculatedMarketcap,
-                volume_24h: 0, // Birdeye price endpoint doesn't provide volume directly
-                liquidity: data.data.liquidity || 0
-            };
+            // Extract market data from the comprehensive overview response
+            let marketData: MarketData;
             
-            logger.debug(`Birdeye data for ${contractAddress}: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
+            if (tokenData.price !== undefined) {
+                // Overview endpoint response
+                marketData = {
+                    price_usd: tokenData.price || 0,
+                    marketcap: tokenData.mc || tokenData.marketCap || 0,
+                    volume_24h: tokenData.v24hUSD || tokenData.volume24hUSD || 0,
+                    liquidity: tokenData.liquidity || 0
+                };
+            } else {
+                // Price endpoint fallback response
+                const defaultSupply = 1000000000; // 1 billion tokens fallback
+                const calculatedMarketcap = tokenData.value * defaultSupply;
+                
+                marketData = {
+                    price_usd: tokenData.value || 0,
+                    marketcap: calculatedMarketcap,
+                    volume_24h: 0, // Price endpoint doesn't provide volume
+                    liquidity: tokenData.liquidity || 0
+                };
+            }
+            
+            logger.info(`✅ BIRDEYE SUCCESS for ${contractAddress}: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
             return marketData;
             
         } catch (error: any) {
