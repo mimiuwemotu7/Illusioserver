@@ -39,7 +39,7 @@ async function runMigrations() {
             SELECT table_name 
             FROM information_schema.tables 
             WHERE table_schema = 'public' 
-            AND table_name IN ('tokens', 'marketcaps')
+            AND table_name IN ('tokens', 'marketcaps', 'token_holders', 'token_holder_summary')
             ORDER BY table_name
         `);
         
