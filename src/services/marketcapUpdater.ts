@@ -40,7 +40,7 @@ export class MarketcapUpdaterService {
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 30000); // 30 seconds - Reduced frequency to prevent database overload
+            }, 5000); // 5 seconds - Optimized for fast market data updates
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');

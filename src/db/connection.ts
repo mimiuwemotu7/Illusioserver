@@ -21,14 +21,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 3, // Severely reduced for Railway stability
-            min: 1,  // Minimal connections
-            idleTimeoutMillis: 30000, // Reduced to 30 seconds
-            connectionTimeoutMillis: 10000, // Reduced to 10 seconds
+            max: 5, // Optimized for faster updates while maintaining stability
+            min: 2,  // Keep some connections ready
+            idleTimeoutMillis: 30000, // 30 seconds
+            connectionTimeoutMillis: 8000, // Reduced to 8 seconds for faster connections
             allowExitOnIdle: false,
             // Add query timeout to prevent hanging queries
-            statement_timeout: 8000, // 8 second query timeout
-            query_timeout: 8000, // 8 second query timeout
+            statement_timeout: 6000, // 6 second query timeout for speed
+            query_timeout: 6000, // 6 second query timeout for speed
         });
 
         // Handle pool errors
@@ -67,7 +67,7 @@ class DatabaseConnection {
                 // Add timeout wrapper for individual queries
                 const queryPromise = this.executeQuery(text, params);
                 const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Query timeout')), 8000)
+                    setTimeout(() => reject(new Error('Query timeout')), 6000)
                 );
                 
                 const result = await Promise.race([queryPromise, timeoutPromise]);
@@ -152,14 +152,14 @@ class DatabaseConnection {
 
         this.pool = new Pool({
             ...config,
-            max: 3, // Severely reduced for Railway stability
-            min: 1,  // Minimal connections
-            idleTimeoutMillis: 30000, // Reduced to 30 seconds
-            connectionTimeoutMillis: 10000, // Reduced to 10 seconds
+            max: 5, // Optimized for faster updates while maintaining stability
+            min: 2,  // Keep some connections ready
+            idleTimeoutMillis: 30000, // 30 seconds
+            connectionTimeoutMillis: 8000, // Reduced to 8 seconds for faster connections
             allowExitOnIdle: false,
             // Add query timeout to prevent hanging queries
-            statement_timeout: 8000, // 8 second query timeout
-            query_timeout: 8000, // 8 second query timeout
+            statement_timeout: 6000, // 6 second query timeout for speed
+            query_timeout: 6000, // 6 second query timeout for speed
         });
         
         console.log('Database pool recreated successfully');
