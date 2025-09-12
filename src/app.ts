@@ -7,6 +7,7 @@ import tokenRoutes from './api/tokenRoutes';
 import transactionRoutes from './api/transactionRoutes';
 import grokRoutes from './api/grokRoutes';
 import adminRoutes from './api/adminRoutes';
+import analyticsRoutes from './api/analyticsRoutes';
 import adminDashboardRoute from './routes/adminDashboard';
 import { WebSocketService } from './api/websocket';
 import { logger } from './utils/logger';
@@ -119,6 +120,7 @@ app.use('/api/tokens', tokenRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/grok', grokRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Admin dashboard route
 app.use('/admin-dashboard', adminDashboardRoute);
