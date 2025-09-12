@@ -76,16 +76,16 @@ export class MarketcapUpdaterService {
             logger.info('🔄 Starting marketcap update cycle...');
             
             // Get all tokens and process them in batches for continuous updates
-            // Get only the 50 most recent fresh tokens for fast updates
-            const freshTokens = await tokenRepository.getTokensByStatus('fresh');
-            const recentFreshTokens = freshTokens.slice(0, 50); // Only process 50 most recent fresh mints
+            // Get the 50 most recent fresh tokens that match the frontend display logic
+            // This ensures we update exactly what users see in the fresh mints column
+            const freshTokens = await tokenRepository.findFreshTokens(50, 0); // Get 50 most recent fresh tokens
             
-            // Get some active tokens for variety
+            // Also get some active tokens for variety (20 tokens)
             const activeTokens = await tokenRepository.getTokensByStatus('active');
-            const recentActiveTokens = activeTokens.slice(0, 20); // Add 20 active tokens
+            const recentActiveTokens = activeTokens.slice(0, 20);
             
-            const targetTokens = [...recentFreshTokens, ...recentActiveTokens];
-            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} (${recentFreshTokens.length} fresh, ${recentActiveTokens.length} active)`);
+            const targetTokens = [...freshTokens, ...recentActiveTokens];
+            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} (${freshTokens.length} fresh, ${recentActiveTokens.length} active)`);
             
             // Process the optimized token list (50 fresh + 20 active = 70 total)
             const tokensToProcess = targetTokens.slice(0, 70); // Process all 70 tokens every cycle

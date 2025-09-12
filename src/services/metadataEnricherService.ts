@@ -91,8 +91,8 @@ export class MetadataEnricherService {
     // Start cron job to enrich tokens every 5 seconds for fast metadata updates
     this.cronJob = cron.schedule("*/5 * * * * *", async () => {
       try {
-        await this.enrichTokens(30); // Optimized batch size for speed
-        await this.enrichSocialLinks(15); // Optimized batch size for social links
+        await this.enrichTokens(50); // Prioritize 50 fresh tokens for speed
+        await this.enrichSocialLinks(25); // Optimized batch size for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }
@@ -119,15 +119,24 @@ export class MetadataEnricherService {
     logger.info("✅ Metadata Enricher Service stopped successfully");
   }
 
-  // Pick ANY tokens missing basics (regardless of liquidity/bonding curve)
-  async enrichTokens(limit = 200) {
-    const mints: string[] = await this.repo.findMintsNeedingMetadata(limit);
+  // Prioritize fresh tokens that are visible in the frontend column
+  async enrichTokens(limit = 50) {
+    // First, get the 50 most recent fresh tokens (same as marketcap updater)
+    const freshTokens = await this.repo.findFreshTokens(50, 0);
+    const freshMints = freshTokens.map(t => t.mint);
+    
+    // Then get other tokens that need metadata
+    const otherMints = await this.repo.findMintsNeedingMetadata(limit - freshMints.length);
+    
+    // Combine with fresh tokens first (priority)
+    const mints = [...freshMints, ...otherMints].slice(0, limit);
+    
     if (mints.length === 0) {
       logger.debug("No tokens need metadata enrichment");
       return;
     }
     
-    logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
+    logger.info(`🚀 Prioritizing ${freshMints.length} fresh tokens + ${otherMints.length} others = ${mints.length} total for metadata enrichment`);
     
     // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with 10 DB connections
     const poolStats = db.getPoolStats();
