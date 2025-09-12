@@ -210,7 +210,7 @@ router.get('/search', async (req: Request, res: Response) => {
                                 const newToken = await tokenRepository.createToken(
                                     trimmedQuery,
                                     9, // Default decimals
-                                    '0', // Default supply
+                                    0, // Default supply
                                     new Date(),
                                     name || 'Unknown Token',
                                     symbol || 'UNKNOWN',
