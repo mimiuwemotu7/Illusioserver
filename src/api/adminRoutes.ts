@@ -7,12 +7,13 @@ const router = Router();
 const analyticsService = AnalyticsService.getInstance();
 
 // Simple admin authentication middleware
-const adminAuth = (req: Request, res: Response, next: any) => {
+const adminAuth = (req: Request, res: Response, next: any): void => {
     const adminKey = req.headers['x-admin-key'] as string;
     const expectedKey = process.env.ADMIN_KEY || 'admin123'; // Set this in your .env
     
     if (!adminKey || adminKey !== expectedKey) {
-        return res.status(401).json({ error: 'Unauthorized - Admin access required' });
+        res.status(401).json({ error: 'Unauthorized - Admin access required' });
+        return;
     }
     
     next();
@@ -38,7 +39,7 @@ router.get('/analytics', async (req: Request, res: Response) => {
 });
 
 // Get real-time metrics
-router.get('/realtime', async (req: Request, res: Response) => {
+router.get('/realtime', async (_req: Request, res: Response) => {
     try {
         const metrics = await analyticsService.getRealtimeMetrics();
         
@@ -191,7 +192,7 @@ router.get('/feature-usage', async (req: Request, res: Response) => {
 });
 
 // Get system health
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', async (_req: Request, res: Response) => {
     try {
         // Database health
         const dbHealth = await db.query('SELECT NOW() as timestamp');
@@ -304,7 +305,7 @@ router.get('/export', async (req: Request, res: Response) => {
             
             // Convert to CSV
             const csvHeaders = 'session_id,ip_address,user_agent,country,city,created_at,last_activity,is_active,total_page_views,total_api_calls\n';
-            const csvRows = sessions.rows.map(row => 
+            const csvRows = sessions.rows.map((row: any) => 
                 `${row.session_id},${row.ip_address || ''},${row.user_agent || ''},${row.country || ''},${row.city || ''},${row.created_at},${row.last_activity},${row.is_active},${row.total_page_views},${row.total_api_calls}`
             ).join('\n');
             
