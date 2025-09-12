@@ -11,7 +11,6 @@ router.get('/', (_req: Request, res: Response) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ILLUSIO Admin Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -268,7 +267,7 @@ router.get('/', (_req: Request, res: Response) => {
         <div class="login-modal">
             <h2>🔐 Admin Access</h2>
             <input type="password" id="adminKey" class="login-input" placeholder="Enter Admin Key" />
-            <button onclick="authenticate()" class="login-btn">Login</button>
+            <button class="login-btn" id="loginButton">Login</button>
             <div id="loginError" class="error-message hidden"></div>
         </div>
     </div>
@@ -278,8 +277,8 @@ router.get('/', (_req: Request, res: Response) => {
         <div class="header">
             <h1>🚀 ILLUSIO Admin Dashboard</h1>
             <div class="auth-section">
-                <button onclick="refreshData()" class="refresh-btn">🔄 Refresh</button>
-                <button onclick="logout()" class="auth-btn logout-btn">Logout</button>
+                <button class="refresh-btn" id="refreshButton">🔄 Refresh</button>
+                <button class="auth-btn logout-btn" id="logoutButton">Logout</button>
             </div>
         </div>
 
@@ -317,16 +316,28 @@ router.get('/', (_req: Request, res: Response) => {
 
         // Authentication
         function authenticate() {
-            const key = document.getElementById('adminKey').value;
-            if (!key) {
-                showLoginError('Please enter an admin key');
-                return;
+            console.log('🔐 Authenticate function called');
+            try {
+                const key = document.getElementById('adminKey').value;
+                console.log('🔑 Admin key length:', key ? key.length : 0);
+                
+                if (!key) {
+                    showLoginError('Please enter an admin key');
+                    return;
+                }
+                
+                adminKey = key;
+                console.log('✅ Admin key set, hiding popup and showing dashboard');
+                
+                document.getElementById('loginPopup').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                console.log('📊 Loading dashboard data...');
+                loadDashboardData();
+            } catch (error) {
+                console.error('❌ Authentication error:', error);
+                showLoginError('Authentication failed: ' + error.message);
             }
-            
-            adminKey = key;
-            document.getElementById('loginPopup').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            loadDashboardData();
         }
 
         function logout() {
@@ -471,6 +482,64 @@ router.get('/', (_req: Request, res: Response) => {
                 loadDashboardData();
             }
         }, 30000);
+
+        // Initialize all event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Admin dashboard loaded');
+            
+            // Login button
+            const loginButton = document.getElementById('loginButton');
+            if (loginButton) {
+                console.log('✅ Login button found');
+                loginButton.addEventListener('click', function(e) {
+                    console.log('🖱️ Login button clicked!');
+                    e.preventDefault();
+                    authenticate();
+                });
+            } else {
+                console.error('❌ Login button not found');
+            }
+            
+            // Refresh button
+            const refreshButton = document.getElementById('refreshButton');
+            if (refreshButton) {
+                console.log('✅ Refresh button found');
+                refreshButton.addEventListener('click', function(e) {
+                    console.log('🖱️ Refresh button clicked!');
+                    e.preventDefault();
+                    refreshData();
+                });
+            } else {
+                console.error('❌ Refresh button not found');
+            }
+            
+            // Logout button
+            const logoutButton = document.getElementById('logoutButton');
+            if (logoutButton) {
+                console.log('✅ Logout button found');
+                logoutButton.addEventListener('click', function(e) {
+                    console.log('🖱️ Logout button clicked!');
+                    e.preventDefault();
+                    logout();
+                });
+            } else {
+                console.error('❌ Logout button not found');
+            }
+            
+            // Admin key input
+            const adminKeyInput = document.getElementById('adminKey');
+            if (adminKeyInput) {
+                console.log('✅ Admin key input found');
+                adminKeyInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        console.log('⌨️ Enter key pressed');
+                        authenticate();
+                    }
+                });
+            } else {
+                console.error('❌ Admin key input not found');
+            }
+        });
     </script>
 </body>
 </html>
