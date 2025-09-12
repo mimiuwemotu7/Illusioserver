@@ -80,12 +80,15 @@ export class TokenRepository {
 
     async searchTokens(query: string, limit: number = 50): Promise<TokenWithMarketCap[]> {
         const searchQuery = `
-            SELECT t.*, 
-                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at,
+                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -113,12 +116,15 @@ export class TokenRepository {
 
     async findTokenByMint(mint: string): Promise<TokenWithMarketCap | null> {
         const query = `
-            SELECT t.*, 
-                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at,
+                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -133,12 +139,15 @@ export class TokenRepository {
 
     async findFreshTokens(limit: number = 100, offset: number = 0): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.*, 
-                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at,
+                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -162,7 +171,7 @@ export class TokenRepository {
             SELECT t.*, m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -177,12 +186,15 @@ export class TokenRepository {
 
     async findTokensByStatus(status: string, limit: number = 100, offset: number = 0): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.*, 
-                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
+                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
+                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
+                   t.updated_at,
+                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT * FROM marketcaps 
+                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
