@@ -265,13 +265,27 @@ export class MarketcapUpdaterService {
             
             logger.info(`🔍 FETCHING BIRDEYE DATA for ${contractAddress} (attempt ${retryCount + 1})`);
             
-            // Try the comprehensive token overview endpoint first
+            // Try multiple Birdeye endpoints to get volume data
+            logger.info(`🌐 MAKING BIRDEYE API CALL to: https://public-api.birdeye.so/public/v1/token/overview?address=${contractAddress}`);
             let response = await fetch(`https://public-api.birdeye.so/public/v1/token/overview?address=${contractAddress}`, {
                 headers: { 
                     'X-API-KEY': this.birdeyeApiKey,
                     'accept': 'application/json'
                 }
             });
+            
+            // If overview doesn't work, try the multi-token endpoint
+            if (!response.ok && response.status === 404) {
+                logger.info(`🔄 Trying multi-token endpoint for ${contractAddress}`);
+                response = await fetch(`https://public-api.birdeye.so/public/v1/multi-token/price?addresses=${contractAddress}`, {
+                    headers: { 
+                        'X-API-KEY': this.birdeyeApiKey,
+                        'accept': 'application/json'
+                    }
+                });
+            }
+            
+            logger.info(`📡 BIRDEYE API RESPONSE STATUS: ${response.status} ${response.statusText}`);
             
             if (!response.ok) {
                 if (response.status === 429 && retryCount < 3) {
@@ -310,17 +324,24 @@ export class MarketcapUpdaterService {
             
             const tokenData = data.data;
             
+            // DEBUG: Log the actual Birdeye response structure
+            logger.info(`🔍 BIRDEYE RESPONSE STRUCTURE for ${contractAddress}:`, JSON.stringify(tokenData, null, 2));
+            
             // Extract market data from the comprehensive overview response
             let marketData: MarketData;
             
             if (tokenData.price !== undefined) {
-                // Overview endpoint response
+                // Overview endpoint response - try multiple possible field names for volume
+                const volume24h = tokenData.v24hUSD || tokenData.volume24hUSD || tokenData.volume24h || tokenData.volume_24h || tokenData.v24h || tokenData['24h_volume'] || 0;
+                
                 marketData = {
                     price_usd: tokenData.price || 0,
                     marketcap: tokenData.mc || tokenData.marketCap || 0,
-                    volume_24h: tokenData.v24hUSD || tokenData.volume24hUSD || 0,
+                    volume_24h: volume24h,
                     liquidity: tokenData.liquidity || 0
                 };
+                
+                logger.info(`📊 EXTRACTED DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
             } else {
                 // Price endpoint fallback response
                 const defaultSupply = 1000000000; // 1 billion tokens fallback
@@ -332,6 +353,8 @@ export class MarketcapUpdaterService {
                     volume_24h: 0, // Price endpoint doesn't provide volume
                     liquidity: tokenData.liquidity || 0
                 };
+                
+                logger.info(`📊 FALLBACK DATA: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
             }
             
             logger.info(`✅ BIRDEYE SUCCESS for ${contractAddress}: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
