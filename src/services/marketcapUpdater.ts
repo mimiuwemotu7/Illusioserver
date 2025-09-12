@@ -18,7 +18,7 @@ export class MarketcapUpdaterService {
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
     private currentBatchIndex: number = 0; // Track which batch we're processing
-    private readonly RATE_LIMIT_MS = 20; // 20ms between requests (50 req/sec - optimized for faster updates)
+    private readonly RATE_LIMIT_MS = 10; // 10ms between requests (100 req/sec - optimized for Business plan)
 
     constructor(birdeyeApiKey: string, wsService: WebSocketService) {
         this.birdeyeApiKey = birdeyeApiKey;
@@ -40,7 +40,7 @@ export class MarketcapUpdaterService {
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');
                 await this.updateAllTokens();
-            }, 5000); // 5 seconds - Optimized for fast market data updates
+            }, 5000); // 5 seconds - Back to fast updates for Business plan
 
             this.isRunning = true;
             logger.info('✅ Marketcap updater service started successfully');
@@ -88,7 +88,7 @@ export class MarketcapUpdaterService {
             const otherTokens = targetTokens.filter(t => t.status !== 'fresh');
             
             // Process fresh tokens first, then other tokens in rotating batches
-            const batchSize = 75; // Optimized batch size for faster market data updates
+            const batchSize = 200; // Optimized for Business plan (100 RPS, 70M CUs/month)
             let tokensToProcess: any[] = [];
             
             // Always include fresh tokens (up to batch size)
