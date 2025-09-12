@@ -4,11 +4,11 @@
   "description": "Simplified Node.js backend for Solana mint discovery and marketcap tracking",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && npm run copy-public",
-    "copy-public": "node -e \"const fs=require('fs'); if(fs.existsSync('public')) fs.cpSync('public', 'dist/public', {recursive:true});\"",
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "migrate": "ts-node src/db/migrate.ts",
+    "migrate-admin": "ts-node src/db/migrate-admin-tables.ts",
     "seed": "ts-node src/db/seed.ts"
   },
   "keywords": [
