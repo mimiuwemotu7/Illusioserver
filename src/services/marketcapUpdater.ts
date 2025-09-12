@@ -17,7 +17,6 @@ export class MarketcapUpdaterService {
     private requestQueue: Array<() => Promise<void>> = [];
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
-    private currentBatchIndex: number = 0; // Track which batch we're processing
     private readonly RATE_LIMIT_MS = 10; // 10ms between requests (100 req/sec - optimized for Business plan)
 
     constructor(birdeyeApiKey: string, wsService: WebSocketService) {
@@ -121,11 +120,6 @@ export class MarketcapUpdaterService {
         }
     }
 
-    private isTargetToken(_token: any): boolean {
-        // Prioritize fresh mints and active tokens
-        // Process ALL tokens but prioritize fresh mints for immediate market cap data
-        return true;
-    }
 
     private async processQueue(): Promise<void> {
         if (this.isProcessingQueue || this.requestQueue.length === 0) {
