@@ -41,7 +41,7 @@ app.use(cors({
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
-            logger.info(`CORS allowing origin: ${origin}`);
+            logger.info(`CORS allowing origin: ${origin} - Railway restart`);
             callback(null, true);
         } else {
             logger.warn(`CORS blocked origin: ${origin}`);
