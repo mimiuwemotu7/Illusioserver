@@ -364,7 +364,7 @@ router.get('/', (_req: Request, res: Response) => {
             try {
                 // Use relative URL if accessed through proxy, otherwise use full URL
                 const baseUrl = window.location.hostname === 'www.illusio.xyz' 
-                    ? '/api/admin' 
+                    ? 'https://server-production-d3da.up.railway.app/api/admin' 
                     : 'https://server-production-d3da.up.railway.app/api/admin';
                 
                 const response = await fetch(\`\${baseUrl}\${endpoint}\`, {
