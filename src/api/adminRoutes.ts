@@ -343,4 +343,50 @@ router.get('/export', async (req: Request, res: Response) => {
     }
 });
 
+// Analytics endpoints for website tracking
+router.post('/pageview', async (req: Request, res: Response) => {
+    try {
+        const { sessionId, pagePath, pageTitle, referrer, userAgent, timestamp } = req.body;
+        
+        // Track session
+        await analyticsService.trackSession(sessionId, req.ip, userAgent);
+        
+        // Track page view
+        await analyticsService.trackPageView(sessionId, pagePath, pageTitle, referrer);
+        
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error tracking page view:', error);
+        res.status(500).json({ error: 'Failed to track page view' });
+    }
+});
+
+router.post('/feature', async (req: Request, res: Response) => {
+    try {
+        const { sessionId, featureName, action, metadata, timestamp } = req.body;
+        
+        // Track feature usage
+        await analyticsService.trackFeatureUsage(sessionId, featureName, action, metadata);
+        
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error tracking feature usage:', error);
+        res.status(500).json({ error: 'Failed to track feature usage' });
+    }
+});
+
+router.post('/session', async (req: Request, res: Response) => {
+    try {
+        const { sessionId, userAgent, timestamp } = req.body;
+        
+        // Track session activity
+        await analyticsService.trackSession(sessionId, req.ip, userAgent);
+        
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error tracking session:', error);
+        res.status(500).json({ error: 'Failed to track session' });
+    }
+});
+
 export default router;
