@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILLUSIO Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #00ff88;
+            font-size: 1.8rem;
+        }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .auth-input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .auth-btn {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .auth-btn:hover {
+            background: #00cc6a;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .card h3 {
+            color: #00ff88;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #2a2a2a;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .status-online {
+            color: #00ff88;
+        }
+
+        .status-offline {
+            color: #ff4444;
+        }
+
+        .refresh-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        .refresh-btn:hover {
+            background: #444;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .time-range-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .time-range-btn.active {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .error {
+            color: #ff4444;
+            background: #2a1a1a;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 ILLUSIO Admin Dashboard</h1>
+        <div class="auth-section">
+            <input type="password" id="adminKey" class="auth-input" placeholder="Admin Key" />
+            <button onclick="authenticate()" class="auth-btn">Login</button>
+            <button onclick="logout()" class="auth-btn" style="background: #ff4444;">Logout</button>
+        </div>
+    </div>
+
+    <div id="loginMessage" class="error hidden">
+        Please enter the admin key to access the dashboard.
+    </div>
+
+    <div id="dashboard" class="container hidden">
+        <div class="header">
+            <h2>Real-time Analytics</h2>
+            <div>
+                <div class="time-range-selector">
+                    <button class="time-range-btn active" onclick="setTimeRange('hour')">Hour</button>
+                    <button class="time-range-btn" onclick="setTimeRange('day')">Day</button>
+                    <button class="time-range-btn" onclick="setTimeRange('week')">Week</button>
+                    <button class="time-range-btn" onclick="setTimeRange('month')">Month</button>
+                </div>
+                <button onclick="refreshData()" class="refresh-btn">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Real-time Metrics -->
+            <div class="card">
+                <h3>📊 Real-time Metrics</h3>
+                <div id="realtimeMetrics">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Analytics Overview -->
+            <div class="card">
+                <h3>📈 Analytics Overview</h3>
+                <div id="analyticsOverview">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="card">
+                <h3>🏥 System Health</h3>
+                <div id="systemHealth">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Token Discovery -->
+            <div class="card">
+                <h3>🪙 Token Discovery</h3>
+                <div id="tokenMetrics">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>📊 Active Users Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="usersChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📊 API Calls Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="apiCallsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tables -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>🌍 Top Pages</h3>
+                <div class="table-container">
+                    <table id="topPagesTable">
+                        <thead>
+                            <tr>
+                                <th>Page</th>
+                                <th>Views</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🎯 Top Features</h3>
+                <div class="table-container">
+                    <table id="topFeaturesTable">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Action</th>
+                                <th>Usage</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🌐 Geographic Distribution</h3>
+                <div class="table-container">
+                    <table id="geoTable">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>City</th>
+                                <th>Users</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🔗 Recent API Calls</h3>
+                <div class="table-container">
+                    <table id="recentApiCallsTable">
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTimeRange = 'day';
+        let adminKey = '';
+        let charts = {};
+
+        // Authentication
+        function authenticate() {
+            const key = document.getElementById('adminKey').value;
+            if (!key) {
+                showError('Please enter an admin key');
+                return;
+            }
+            
+            adminKey = key;
+            document.getElementById('loginMessage').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            loadDashboardData();
+        }
+
+        function logout() {
+            adminKey = '';
+            document.getElementById('adminKey').value = '';
+            document.getElementById('loginMessage').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('loginMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // API calls
+        async function apiCall(endpoint) {
+            try {
+                const response = await fetch(`/api/admin${endpoint}`, {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load all data in parallel
+                const [realtime, analytics, health, tokens] = await Promise.all([
+                    apiCall('/realtime'),
+                    apiCall(`/analytics?range=${currentTimeRange}`),
+                    apiCall('/health'),
+                    apiCall(`/tokens?range=${currentTimeRange}`)
+                ]);
+
+                updateRealtimeMetrics(realtime.data);
+                updateAnalyticsOverview(analytics.data);
+                updateSystemHealth(health.data);
+                updateTokenMetrics(tokens.data);
+                updateTables(analytics.data);
+                updateCharts(analytics.data);
+
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                showError('Failed to load dashboard data: ' + error.message);
+            }
+        }
+
+        // Update real-time metrics
+        function updateRealtimeMetrics(data) {
+            const container = document.getElementById('realtimeMetrics');
+            container.innerHTML = `
+                <div class="metric">
+                    <span>Active Users (5min)</span>
+                    <span class="metric-value">${data.activeUsers}</span>
+                </div>
+                <div class="metric">
+                    <span>API Calls/min</span>
+                    <span class="metric-value">${data.apiCallsPerMinute}</span>
+                </div>
+                <div class="metric">
+                    <span>Last Updated</span>
+                    <span>${new Date(data.timestamp).toLocaleTimeString()}</span>
+                </div>
+            `;
+        }
+
+        // Update analytics overview
+        function updateAnalyticsOverview(data) {
+            const container = document.getElementById('analyticsOverview');
+            container.innerHTML = `
+                <div class="metric">
+                    <span>Active Users</span>
+                    <span class="metric-value">${data.activeUsers}</span>
+                </div>
+                <div class="metric">
+                    <span>Page Views</span>
+                    <span class="metric-value">${data.pageViews}</span>
+                </div>
+                <div class="metric">
+                    <span>API Calls</span>
+                    <span class="metric-value">${data.apiCalls}</span>
+                </div>
+                <div class="metric">
+                    <span>Time Range</span>
+                    <span>${data.timeRange}</span>
+                </div>
+            `;
+        }
+
+        // Update system health
+        function updateSystemHealth(data) {
+            const container = document.getElementById('systemHealth');
+            const uptime = Math.floor(data.uptime / 3600);
+            const memory = Math.round(data.memory.heapUsed / 1024 / 1024);
+            
+            container.innerHTML = `
+                <div class="metric">
+                    <span>Database</span>
+                    <span class="status-online">✅ Healthy</span>
+                </div>
+                <div class="metric">
+                    <span>Uptime</span>
+                    <span>${uptime}h</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Usage</span>
+                    <span>${memory}MB</span>
+                </div>
+                <div class="metric">
+                    <span>Recent Errors</span>
+                    <span>${data.recentErrors.length}</span>
+                </div>
+            `;
+        }
+
+        // Update token metrics
+        function updateTokenMetrics(data) {
+            const container = document.getElementById('tokenMetrics');
+            container.innerHTML = `
+                <div class="metric">
+                    <span>Tokens Discovered</span>
+                    <span class="metric-value">${data.totalDiscovered}</span>
+                </div>
+                <div class="metric">
+                    <span>By Source</span>
+                    <span>${data.bySource.map(s => `${s.source}: ${s.count}`).join(', ')}</span>
+                </div>
+                <div class="metric">
+                    <span>By Status</span>
+                    <span>${data.byStatus.map(s => `${s.status}: ${s.count}`).join(', ')}</span>
+                </div>
+            `;
+        }
+
+        // Update tables
+        function updateTables(data) {
+            // Top pages
+            const topPagesTable = document.querySelector('#topPagesTable tbody');
+            topPagesTable.innerHTML = data.topPages.map(page => `
+                <tr>
+                    <td>${page.page_path}</td>
+                    <td>${page.views}</td>
+                </tr>
+            `).join('');
+
+            // Top features
+            const topFeaturesTable = document.querySelector('#topFeaturesTable tbody');
+            topFeaturesTable.innerHTML = data.topFeatures.map(feature => `
+                <tr>
+                    <td>${feature.feature_name}</td>
+                    <td>${feature.action}</td>
+                    <td>${feature.usage_count}</td>
+                </tr>
+            `).join('');
+
+            // Geographic distribution
+            const geoTable = document.querySelector('#geoTable tbody');
+            geoTable.innerHTML = data.geoData.map(geo => `
+                <tr>
+                    <td>${geo.country || 'Unknown'}</td>
+                    <td>${geo.city || 'Unknown'}</td>
+                    <td>${geo.user_count}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update charts
+        function updateCharts(data) {
+            // This would require more complex chart implementation
+            // For now, just show placeholder
+            console.log('Chart data:', data);
+        }
+
+        // Time range selector
+        function setTimeRange(range) {
+            currentTimeRange = range;
+            document.querySelectorAll('.time-range-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadDashboardData();
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadDashboardData();
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (adminKey) {
+                loadDashboardData();
+            }
+        }, 30000);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if already authenticated (for development)
+            if (window.location.search.includes('key=')) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const key = urlParams.get('key');
+                if (key) {
+                    document.getElementById('adminKey').value = key;
+                    authenticate();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
