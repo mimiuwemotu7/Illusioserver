@@ -12,7 +12,7 @@ router.get('/', (_req: Request, res: Response) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ILLUSIO Admin Dashboard</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        /* Inter font fallback - using system fonts for CSP compliance */
         
         * {
             margin: 0;
@@ -21,7 +21,7 @@ router.get('/', (_req: Request, res: Response) => {
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
             background: #000;
             color: #ffffff;
             line-height: 1.6;
