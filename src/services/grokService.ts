@@ -97,7 +97,7 @@ export class GrokService {
     return await this.chatCompletion([systemMessage, userMessage]);
   }
 
-  async generateCompanionResponse(tokenData: any, userQuery: string): Promise<string | null> {
+  async generateCompanionResponse(tokenData: any, userQuery: string, companionName?: string): Promise<string | null> {
     const systemMessage: GrokMessage = {
       role: 'system',
       content: `ORACLE SYSTEM PROMPT — ILLUSIO
@@ -154,7 +154,7 @@ CONVERSATION RULES
 OUTPUT FORMAT
 - Return ONLY the message text. No role tags, no prefixes, no quotes.
 
-You are a mystical oracle agent analyzing this token.`
+You are ${companionName || 'a mystical oracle agent'} analyzing this token. Respond ONLY in your persona's voice and style.`
     };
 
     const userMessage: GrokMessage = {

@@ -41,7 +41,7 @@ router.post('/analyze/:mint', async (req, res) => {
 router.post('/chat/:mint', async (req, res) => {
   try {
     const { mint } = req.params;
-    const { message, userMessage } = req.body;
+    const { message, userMessage, companionName } = req.body;
     const actualMessage = message || userMessage;
     
     if (!actualMessage) {
@@ -53,7 +53,7 @@ router.post('/chat/:mint', async (req, res) => {
       return res.status(404).json({ error: 'Token not found' });
     }
 
-    const response = await grokService.generateCompanionResponse(token, actualMessage);
+    const response = await grokService.generateCompanionResponse(token, actualMessage, companionName);
     
     if (!response) {
       return res.status(500).json({ error: 'Failed to generate response' });
