@@ -652,6 +652,11 @@ export class MarketCapRepository {
             created_at: row.created_at,
             updated_at: row.updated_at,
             display_name: row.display_name,
+            // Add marketcap data at root level for consistency with other queries
+            price_usd: row.price_usd,
+            marketcap: row.marketcap,
+            volume_24h: row.volume_24h,
+            liquidity: row.liquidity,
             latest_marketcap: row.marketcap_timestamp ? {
                 id: 0, // This would need to be properly set if we had the marketcap id
                 token_id: row.id,
