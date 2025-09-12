@@ -77,38 +77,20 @@ export class MarketcapUpdaterService {
             logger.info('🔄 Starting marketcap update cycle...');
             
             // Get all tokens and process them in batches for continuous updates
-            const allTokens = await tokenRepository.getAllTokens();
-            logger.info(`📊 Total tokens in database: ${allTokens.length}`);
+            // Get only the 50 most recent fresh tokens for fast updates
+            const freshTokens = await tokenRepository.getTokensByStatus('fresh');
+            const recentFreshTokens = freshTokens.slice(0, 50); // Only process 50 most recent fresh mints
             
-            const targetTokens = allTokens.filter(t => this.isTargetToken(t));
-            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length}`);
+            // Get some active tokens for variety
+            const activeTokens = await tokenRepository.getTokensByStatus('active');
+            const recentActiveTokens = activeTokens.slice(0, 20); // Add 20 active tokens
             
-            // Prioritize fresh mints - always include them in the batch
-            const freshTokens = targetTokens.filter(t => t.status === 'fresh');
-            const otherTokens = targetTokens.filter(t => t.status !== 'fresh');
+            const targetTokens = [...recentFreshTokens, ...recentActiveTokens];
+            logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} (${recentFreshTokens.length} fresh, ${recentActiveTokens.length} active)`);
             
-            // Process fresh tokens first, then other tokens in rotating batches
-            const batchSize = 200; // Optimized for Business plan (100 RPS, 70M CUs/month)
-            let tokensToProcess: any[] = [];
-            
-            // Always include fresh tokens (up to batch size)
-            if (freshTokens.length > 0) {
-                tokensToProcess = freshTokens.slice(0, batchSize);
-                logger.info(`🔥 Processing ${freshTokens.length} fresh mints first`);
-            }
-            
-            // Fill remaining slots with other tokens
-            if (tokensToProcess.length < batchSize && otherTokens.length > 0) {
-                const remainingSlots = batchSize - tokensToProcess.length;
-                const startIndex = (this.currentBatchIndex * remainingSlots) % otherTokens.length;
-                const additionalTokens = otherTokens.slice(startIndex, startIndex + remainingSlots);
-                tokensToProcess = [...tokensToProcess, ...additionalTokens];
-                
-                // Update batch index for next cycle
-                this.currentBatchIndex = (this.currentBatchIndex + 1) % Math.ceil(otherTokens.length / remainingSlots);
-            }
-            
-            logger.info(`🚀 Processing batch: ${tokensToProcess.length} tokens (${freshTokens.length} fresh, ${tokensToProcess.length - freshTokens.length} others)`);
+            // Process the optimized token list (50 fresh + 20 active = 70 total)
+            const tokensToProcess = targetTokens.slice(0, 70); // Process all 70 tokens every cycle
+            logger.info(`🚀 Processing ${tokensToProcess.length} tokens (50 fresh + 20 active) every 5 seconds`);
             
             // Log some sample tokens
             if (tokensToProcess.length > 0) {
