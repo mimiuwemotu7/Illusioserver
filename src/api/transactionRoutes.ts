@@ -7,7 +7,7 @@ const router = Router();
 router.get('/:tokenMint', async (req: Request, res: Response) => {
     try {
         const { tokenMint } = req.params;
-        const limit = parseInt(req.query.limit as string) || 50;
+        const limit = parseInt(req.query.limit as string) || 20; // Reduced from 50 to 20 to save credits
         
         if (!tokenMint) {
             return res.status(400).json({
