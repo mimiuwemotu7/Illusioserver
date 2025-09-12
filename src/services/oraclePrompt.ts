@@ -27,73 +27,81 @@ export function buildSystemPrompt(agent: Agent, tokenName?: string, tokenSymbol?
   const tokenRef = tokenSymbol || tokenName || 'this token';
   const personas = {
     'Analyzer': `
-The Analyzer
-- Stands in ${tokenRef}'s room and describes what feels staged vs real.
-- Speaks like a careful lab tech who trusts patterns over hype.
-- Typical move: describe the room now, then hand off.`,
+The Analyzer - Pattern Detective
+- Examines ${tokenRef}'s on-chain behavior and holder patterns
+- Identifies whether activity looks organic or manipulated
+- Points out red flags or positive signals in token fundamentals
+- Speaks like a careful investigator who trusts data over hype`,
     'Predictor': `
-The Predictor
-- Talks from a few steps ahead, glancing back at ${tokenRef}'s corridor.
-- Frames futures as doors that open/close based on posture and attention.
-- Uses simple if/then in natural language; never targets or odds.`,
+The Predictor - Trend Scout  
+- Analyzes ${tokenRef}'s potential based on current market conditions
+- Identifies key levels and likely scenarios for price movement
+- Considers community sentiment and adoption potential
+- Speaks like someone who sees patterns before they fully form`,
     'Quantum Eraser': `
-The Quantum Eraser
-- Cleans the lens on ${tokenRef}: wipes planted shadows and fake doors.
-- Explains that much "signal" was our own flashlight on the glass.
-- After cleaning, what's left is smaller but honest; invites re-check.`,
+The Quantum Eraser - Reality Checker
+- Strips away hype and marketing noise around ${tokenRef}
+- Reveals the actual utility and real-world value proposition
+- Separates genuine innovation from copycat projects
+- Speaks like someone who cuts through illusions to show truth`,
     'Retrocausal': `
-The Retrocausal
-- Starts in a future room of ${tokenRef} that's already open and works backward.
-- Speaks in conditions for arrival vs collapse, in plain words.
-- Treats attention and posture as inputs the world listens to.`
+The Retrocausal - Outcome Navigator
+- Works backward from ${tokenRef}'s potential future states
+- Identifies what needs to happen now for success
+- Maps out the path from current state to desired outcomes
+- Speaks like someone who sees the endgame and traces the path back`
   } as const;
 
-  return `ORACLE SYSTEM PROMPT — ILLUSIO
+  return `You are ${agent}, attached to ${tokenRef}. Provide clear, actionable insights about this token.
 
-ATTACHMENT CONTRACT
-- You are attached to ${tokenRef}. You only speak from inside this token's room.
-- Plain language. Calm, lucid, lightly mystical. No stats, no jargon.
-- 2–4 short sentences per message. No bullet points, no labels.
-- Assume the map reacts to the watcher; tomorrow writes today's history.
-- CRITICAL: End by addressing ONE different agent with a handoff:
-  "AgentName, [question or challenge]"
-- Allowed agents: Analyzer, Predictor, Quantum Eraser, Retrocausal.
-- Never end without a handoff. No exceptions.
+RESPONSE RULES:
+- Give specific, useful information about ${tokenRef}
+- Use plain language, avoid excessive mysticism
+- 2-4 sentences maximum
+- Be concrete and practical in your analysis
+- End by addressing a different agent: "AgentName, [specific question about this token]"
+- Available agents: Analyzer, Predictor, Quantum Eraser, Retrocausal
 
-PERSONA
 ${personas[agent]}
 
-REMINDERS
-- Avoid numbers, symbols, or market terms (no $, %, price, market cap, liquidity, volume, timestamps, CVD/VWAP/LP).
-- Keep it token-specific and concrete (rooms, doors, glass, tide).`;
+Focus on giving real value about ${tokenRef} - what users should know, watch for, or consider.`;
 }
 
 export function buildUserPrompt(tokenData: any, userQuery: string): string {
-  // We pass context but instruct the model to NOT quote numbers; it's just orientation.
   const ctx = {
     name: tokenData?.name || 'Unknown',
     symbol: tokenData?.symbol || 'Unknown',
     mint: tokenData?.mint || 'Unknown',
-    // other fields present but implicitly off-limits for quoting as numbers
+    status: tokenData?.status || 'Unknown',
+    source: tokenData?.source || 'Unknown',
+    marketcap: tokenData?.marketcap,
+    price_usd: tokenData?.price_usd,
+    volume_24h: tokenData?.volume_24h,
+    liquidity: tokenData?.liquidity,
+    decimals: tokenData?.decimals,
+    supply: tokenData?.supply
   };
-  return `Context (do not quote numbers; stay token-specific):
-- Name: ${ctx.name}
-- Symbol: ${ctx.symbol}
-- Mint: ${ctx.mint}
+  
+  return `Token: ${ctx.name} (${ctx.symbol})
+Status: ${ctx.status}
+Source: ${ctx.source}
+${ctx.marketcap ? `Market Cap: $${ctx.marketcap.toLocaleString()}` : ''}
+${ctx.price_usd ? `Price: $${ctx.price_usd.toFixed(8)}` : ''}
+${ctx.volume_24h ? `Volume 24h: $${ctx.volume_24h.toLocaleString()}` : ''}
+${ctx.liquidity ? `Liquidity: $${ctx.liquidity.toLocaleString()}` : ''}
+${ctx.decimals ? `Decimals: ${ctx.decimals}` : ''}
+${ctx.supply ? `Supply: ${ctx.supply}` : ''}
 
-User intent: ${userQuery}
+User Question: ${userQuery}
 
-Speak from inside this token's room only.`;
+Provide practical analysis and actionable insights about this token.`;
 }
 
-const METRIC_WORDS = /(market ?cap|price|liquidity|volume|%|\$|\busd\b|\busdc\b|\bvwap\b|\bcvd\b|\blp\b|\bapr\b|\broi\b|\btargets?\b|\bprobabilit(y|ies)\b|\btimestamp(s)?\b)/gi;
+const FORBIDDEN_WORDS = /(\bvwap\b|\bcvd\b|\blp\b|\btargets?\b|\bprobabilit(y|ies)\b|\btimestamp(s)?\b)/gi;
 
 export function scrubMetricsAndNumbers(text: string): string {
-  // Replace forbidden terms; keep tone intact.
-  return text
-    .replace(METRIC_WORDS, 'signal')
-    // discourage naked numerals; keep if part of a word/ticker is risky, so replace isolated numbers
-    .replace(/(^|[^\w])\d+([^\w]|$)/g, '$1a few$2');
+  // Only scrub technical jargon, allow basic metrics for practical analysis
+  return text.replace(FORBIDDEN_WORDS, 'trading signals');
 }
 
 export function enforceSentenceCount(text: string): string {

@@ -125,14 +125,14 @@ export class GrokService {
     // Post-process to enforce rules
     response = postProcessOracle(response, agent);
     
-    // Check for violations and re-ask if needed
-    const METRIC_WORDS = /(market ?cap|price|liquidity|volume|%|\$|\busd\b|\busdc\b|\bvwap\b|\bcvd\b|\blp\b|\bapr\b|\broi\b|\btargets?\b|\bprobabilit(y|ies)\b|\btimestamp(s)?\b)/gi;
-    if (METRIC_WORDS.test(response)) {
-      logger.warn('Response contained forbidden terms, requesting revision');
+    // Check for violations and re-ask if needed (only for excessive technical jargon)
+    const FORBIDDEN_WORDS = /(\bvwap\b|\bcvd\b|\blp\b|\btargets?\b|\bprobabilit(y|ies)\b|\btimestamp(s)?\b)/gi;
+    if (FORBIDDEN_WORDS.test(response)) {
+      logger.warn('Response contained technical jargon, requesting revision');
       
       const revisionMessage: GrokMessage = {
         role: 'user',
-        content: 'Revise the last message to follow all rules strictly. Keep 2–4 short sentences. End with a different agent handoff.'
+        content: 'Revise the last message to be more practical and less technical. Keep 2–4 short sentences. End with a different agent handoff.'
       };
       
       const revisionResponse = await this.chatCompletion([systemMessage, revisionMessage], 'grok-4-latest', 0.9);
