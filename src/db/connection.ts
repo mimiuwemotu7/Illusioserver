@@ -49,6 +49,15 @@ class DatabaseConnection {
         return await this.pool.connect();
     }
 
+    // Add connection pool monitoring for performance tracking
+    public getPoolStats(): { totalCount: number; idleCount: number; waitingCount: number } {
+        return {
+            totalCount: this.pool.totalCount,
+            idleCount: this.pool.idleCount,
+            waitingCount: this.pool.waitingCount
+        };
+    }
+
     public async query(text: string, params?: any[]): Promise<any> {
         let client;
         try {

@@ -1,6 +1,7 @@
 import { getOnchainMetadata } from "../lib/onchainMetadata";
 import { resolveImageUrl } from "../lib/offchainMetadata";
 import { TokenRepository } from "../db/repository";
+import db from "../db/connection";
 import { Connection } from "@solana/web3.js";
 import { logger } from "../utils/logger";
 import * as cron from "node-cron";
@@ -90,8 +91,8 @@ export class MetadataEnricherService {
     // Start cron job to enrich tokens every 1 second for ULTRA FAST processing
     this.cronJob = cron.schedule("*/1 * * * * *", async () => {
       try {
-        await this.enrichTokens(100); // Process 100 tokens at a time for ULTRA FAST enrichment
-        await this.enrichSocialLinks(50); // Process 50 tokens for social links
+        await this.enrichTokens(150); // Increased to 150 tokens for ULTRA FAST enrichment with optimized batching
+        await this.enrichSocialLinks(75); // Increased to 75 tokens for social links
       } catch (error) {
         logger.error("Error in metadata enrichment cron job:", error);
       }
@@ -128,8 +129,13 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching metadata for ${mints.length} tokens`);
     
-    // ULTRA-FAST PROCESSING: Process in massive parallel batches
-    const batchSize = 100; // MASSIVE batch size for ULTRA FAST processing
+    // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with 10 DB connections
+    const poolStats = db.getPoolStats();
+    const maxConcurrentConnections = Math.max(6, Math.min(8, poolStats.idleCount)); // Dynamic sizing based on available connections
+    const batchSize = Math.min(maxConcurrentConnections, mints.length);
+    
+    logger.debug(`📊 DB Pool: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting | Batch size: ${batchSize}`);
+    
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
@@ -154,8 +160,13 @@ export class MetadataEnricherService {
     
     logger.info(`🚀 ULTRA-FAST enriching social links for ${mints.length} tokens`);
     
-    // Process in larger batches with parallel processing for maximum speed
-    const batchSize = 5; // Increased for faster processing
+    // OPTIMIZED PROCESSING: Dynamic batch sizing for maximum efficiency with 10 DB connections
+    const poolStats = db.getPoolStats();
+    const maxConcurrentConnections = Math.max(4, Math.min(6, poolStats.idleCount)); // Dynamic sizing based on available connections
+    const batchSize = Math.min(maxConcurrentConnections, mints.length);
+    
+    logger.debug(`📊 DB Pool: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting | Social batch size: ${batchSize}`);
+    
     for (let i = 0; i < mints.length; i += batchSize) {
       const batch = mints.slice(i, i + batchSize);
       
@@ -165,7 +176,7 @@ export class MetadataEnricherService {
       
       // Minimal delay between batches
       if (i + batchSize < mints.length) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Further reduced to 100ms
+        await new Promise(resolve => setTimeout(resolve, 50)); // Reduced to 50ms for faster processing
       }
     }
   }
