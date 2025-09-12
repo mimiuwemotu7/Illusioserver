@@ -73,7 +73,7 @@ export class TokenRepository {
     }
 
     async findByMint(mint: string): Promise<Token | null> {
-        const query = 'SELECT id, name, symbol, mint, creator, source, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at FROM tokens WHERE mint = $1';
+        const query = 'SELECT * FROM tokens WHERE mint = $1';
         const result = await db.query(query, [mint]);
         return result.rows[0] || null;
     }
@@ -89,6 +89,7 @@ export class TokenRepository {
             FROM tokens t
             LEFT JOIN LATERAL (
                 SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+                FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -125,6 +126,7 @@ export class TokenRepository {
             FROM tokens t
             LEFT JOIN LATERAL (
                 SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+                FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -139,15 +141,12 @@ export class TokenRepository {
 
     async findFreshTokens(limit: number = 100, offset: number = 0): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
-                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
-                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
-                   t.updated_at,
-                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.*, 
+                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+                SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -171,7 +170,7 @@ export class TokenRepository {
             SELECT t.*, m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+                SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -186,15 +185,12 @@ export class TokenRepository {
 
     async findTokensByStatus(status: string, limit: number = 100, offset: number = 0): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
-                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
-                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
-                   t.updated_at,
-                   COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
-                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.*, 
+                COALESCE(t.name, t.symbol, SUBSTRING(t.mint,1,4) || '…' || SUBSTRING(t.mint FROM LENGTH(t.mint)-3)) AS display_name,
+                m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity, timestamp 
+                SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -304,7 +300,7 @@ export class TokenRepository {
 
     async getTokenByMint(mint: string): Promise<Token | null> {
         const { rows } = await db.query(
-            `SELECT id, name, symbol, mint, creator, source, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at FROM tokens WHERE mint = $1`,
+            `SELECT * FROM tokens WHERE mint = $1`,
             [mint]
         );
         return rows.length > 0 ? rows[0] : null;
@@ -351,15 +347,10 @@ export class TokenRepository {
 
     async getAllTokens(): Promise<TokenWithMarketCap[]> {
         const query = `
-            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
-                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
-                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
-                   t.updated_at,
-                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity
+            SELECT t.*, m.price_usd, m.marketcap, m.volume_24h, m.liquidity
             FROM tokens t
             LEFT JOIN LATERAL (
-                SELECT price_usd, marketcap, volume_24h, liquidity
-                FROM marketcaps 
+                SELECT * FROM marketcaps 
                 WHERE token_id = t.id 
                 ORDER BY timestamp DESC 
                 LIMIT 1
@@ -372,7 +363,7 @@ export class TokenRepository {
 
     async getTokensByStatus(status: 'fresh' | 'active' | 'curve'): Promise<Token[]> {
         const query = `
-            SELECT id, name, symbol, mint, creator, source, decimals, supply, blocktime, status, metadata_uri, image_url, bonding_curve_address, is_on_curve, created_at, updated_at FROM tokens 
+            SELECT * FROM tokens 
             WHERE status = $1 
             ORDER BY created_at DESC
         `;
@@ -495,10 +486,7 @@ export class MarketCapRepository {
 
     async findByMint(mint: string): Promise<TokenWithMarketCap | null> {
         const query = `
-            SELECT t.id, t.name, t.symbol, t.mint, t.creator, t.source, 
-                   t.decimals, t.supply, t.blocktime, t.status, t.metadata_uri, 
-                   t.image_url, t.bonding_curve_address, t.is_on_curve, t.created_at, 
-                   t.updated_at,
+            SELECT t.*, 
                    m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.timestamp as marketcap_timestamp
             FROM tokens t
             LEFT JOIN LATERAL (
