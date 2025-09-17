@@ -110,6 +110,7 @@ export class MarketcapUpdaterService {
             
             // Process ALL 50 fresh tokens every cycle for maximum coverage
             const tokensToProcess = targetTokens.slice(0, 50); // Process exactly 50 fresh tokens every cycle
+            console.log(`🚀 Processing ${tokensToProcess.length} fresh tokens every 500ms`);
             logger.info(`🚀 Processing ${tokensToProcess.length} fresh tokens every 500ms`);
             
             // Log some sample tokens with their current marketcap status
@@ -126,6 +127,7 @@ export class MarketcapUpdaterService {
             
             // Update target tokens with price data using BATCH API CALLS for maximum speed
             if (tokensToProcess.length > 0) {
+                console.log(`🚀 BATCH PROCESSING ${tokensToProcess.length} tokens for marketcap updates (100 req/sec limit)`);
                 logger.info(`🚀 BATCH PROCESSING ${tokensToProcess.length} tokens for marketcap updates (100 req/sec limit)`);
                 
                 // Process tokens in batches of 20 for optimal API usage
@@ -148,6 +150,7 @@ export class MarketcapUpdaterService {
                     this.processQueue();
                 }
             } else {
+                console.log('⚠️ No target tokens found for marketcap updates');
                 logger.warn('⚠️ No target tokens found for marketcap updates');
             }
             
