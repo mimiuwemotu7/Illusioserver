@@ -119,14 +119,14 @@ app.get('/health', (_req, res) => {
     // Try to get actual service status
     try {
         // Check if services are available globally
-        if (global.mintWatcherStatus) {
-            serviceStatus.mintWatcher = global.mintWatcherStatus;
+        if (globalThis.mintWatcherStatus) {
+            serviceStatus.mintWatcher = globalThis.mintWatcherStatus;
         }
-        if (global.marketcapUpdaterStatus) {
-            serviceStatus.marketcapUpdater = global.marketcapUpdaterStatus;
+        if (globalThis.marketcapUpdaterStatus) {
+            serviceStatus.marketcapUpdater = globalThis.marketcapUpdaterStatus;
         }
-        if (global.metadataEnricherStatus) {
-            serviceStatus.metadataEnricher = global.metadataEnricherStatus;
+        if (globalThis.metadataEnricherStatus) {
+            serviceStatus.metadataEnricher = globalThis.metadataEnricherStatus;
         }
     } catch (error) {
         // Ignore errors, use default status

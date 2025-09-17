@@ -136,10 +136,10 @@ const startServer = async () => {
                 try {
                     logger.info('🔍 Starting Mint Watcher service...');
                     await mintWatcher.start();
-                    global.mintWatcherStatus = 'running';
+                    globalThis.mintWatcherStatus = 'running';
                     logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
                 } catch (error) {
-                    global.mintWatcherStatus = 'failed';
+                    globalThis.mintWatcherStatus = 'failed';
                     logger.error('❌ Failed to start Mint Watcher:', error);
                 }
                 
@@ -147,10 +147,10 @@ const startServer = async () => {
                 try {
                     logger.info('🔍 Starting Marketcap Updater service...');
                     await marketcapUpdater.start();
-                    global.marketcapUpdaterStatus = 'running';
+                    globalThis.marketcapUpdaterStatus = 'running';
                     logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
                 } catch (error) {
-                    global.marketcapUpdaterStatus = 'failed';
+                    globalThis.marketcapUpdaterStatus = 'failed';
                     logger.error('❌ Failed to start Marketcap Updater:', error);
                 }
                 
@@ -158,10 +158,10 @@ const startServer = async () => {
                 try {
                     logger.info('🔍 Starting Metadata Enricher service...');
                     await metadataEnricher.start();
-                    global.metadataEnricherStatus = 'running';
+                    globalThis.metadataEnricherStatus = 'running';
                     logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
                 } catch (error) {
-                    global.metadataEnricherStatus = 'failed';
+                    globalThis.metadataEnricherStatus = 'failed';
                     logger.error('❌ Failed to start Metadata Enricher:', error);
                 }
                 
