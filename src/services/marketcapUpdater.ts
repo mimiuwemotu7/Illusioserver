@@ -51,12 +51,14 @@ export class MarketcapUpdaterService {
             // Start the update loop (ULTRA FAST for fresh mints)
             this.intervalId = setInterval(async () => {
                 try {
+                    console.log('⏰ Marketcap update cycle triggered');
                     logger.info('⏰ Marketcap update cycle triggered');
                     await this.updateAllTokens();
                     
                     // Clean up expired cache entries
                     this.cleanupCache();
                 } catch (error) {
+                    console.error('❌ Error in marketcap update cycle:', error);
                     logger.error('❌ Error in marketcap update cycle:', error);
                 }
             }, 500); // 500ms - ULTRA FAST updates for fresh mints
@@ -94,6 +96,7 @@ export class MarketcapUpdaterService {
 
     private async updateAllTokens(): Promise<void> {
         try {
+            console.log('🔄 Starting marketcap update cycle...');
             logger.info('🔄 Starting marketcap update cycle...');
             
             // PRIORITY: Get the 50 most recent fresh tokens that match the frontend display logic
@@ -102,6 +105,7 @@ export class MarketcapUpdaterService {
             
             // Focus ONLY on fresh tokens for maximum speed and coverage
             const targetTokens = freshTokens;
+            console.log(`🎯 Target tokens for pricing: ${targetTokens.length} fresh tokens`);
             logger.info(`🎯 Target tokens for pricing: ${targetTokens.length} fresh tokens`);
             
             // Process ALL 50 fresh tokens every cycle for maximum coverage
