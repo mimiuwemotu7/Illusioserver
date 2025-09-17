@@ -151,18 +151,18 @@ const startServer = async () => {
                     logger.error('❌ Failed to start Mint Watcher:', error);
                 }
                 
-                // Start marketcap updater service
+                // Start marketcap updater service (DISABLED - using on-demand fetching instead)
                 try {
-                    console.log('🔍 Starting Marketcap Updater service...');
-                    logger.info('🔍 Starting Marketcap Updater service...');
+                    console.log('🔍 Starting Simple Marketcap Updater service...');
+                    logger.info('🔍 Starting Simple Marketcap Updater service...');
                     await marketcapUpdater.start();
                     globalThis.marketcapUpdaterStatus = 'running';
-                    console.log('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
-                    logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
+                    console.log('✅ Simple Marketcap Updater: Background updates every 30s (on-demand primary)');
+                    logger.info('✅ Simple Marketcap Updater: Background updates every 30s (on-demand primary)');
                 } catch (error) {
                     globalThis.marketcapUpdaterStatus = 'failed';
-                    console.error('❌ Failed to start Marketcap Updater:', error);
-                    logger.error('❌ Failed to start Marketcap Updater:', error);
+                    console.error('❌ Failed to start Simple Marketcap Updater:', error);
+                    logger.error('❌ Failed to start Simple Marketcap Updater:', error);
                 }
                 
                 // Start metadata enricher service

@@ -144,19 +144,16 @@ export class MintWatcherService {
                 return;
             }
 
-            // Check if this is a Jupiter or Sugar token and skip it
-            if (this.isJupiterOrSugarToken(mintInfo.mint)) {
-                logger.info(`🚫 Skipping Jupiter/Sugar token: ${mintInfo.mint}`);
+            // ONLY ALLOW PUMP.FUN AND BONK.FUN TOKENS
+            const tokenSource = this.identifyTokenSource(tx, mintInfo.mint);
+            if (!tokenSource) {
+                logger.info(`🚫 Skipping non-Pump/Bonk token: ${mintInfo.mint}`);
                 return;
             }
 
-            // Check if this is a candy machine transaction and skip it
-            if (this.isCandyMachineTransaction(tx)) {
-                logger.info(`🚫 Skipping candy machine transaction: ${mintInfo.mint}`);
-                return;
-            }
+            logger.info(`✅ ${tokenSource.toUpperCase()} token detected: ${mintInfo.mint}`);
 
-            // Save to database
+            // Save to database with identified source
             const newToken = await tokenRepository.createToken(
                 mintInfo.mint,
                 mintInfo.decimals,
@@ -168,7 +165,8 @@ export class MintWatcherService {
                 undefined, // imageUrl
                 undefined, // bondingCurveAddress
                 false,     // isOnCurve - default to false, will be updated by metadata enricher
-                'fresh'    // status
+                'fresh',   // status
+                tokenSource // source - pump.fun or bonk.fun
             );
 
             logger.info(`Successfully processed mint: ${mintInfo.mint} (${mintInfo.decimals} decimals)`);
@@ -222,129 +220,71 @@ export class MintWatcherService {
         }
     }
 
-    private isJupiterOrSugarToken(mint: string): boolean {
-        // Known Jupiter and Sugar token patterns
-        const jupiterPatterns = [
-            'JUP', // Jupiter token
-            'JUPITER', // Jupiter variations
-            'JUPITERLEND', // Jupiter Lend
-            'JUPITERBORROW', // Jupiter Borrow
-        ];
-        
-        const sugarPatterns = [
-            'SUGAR', // Sugar token
-            'SUGARGLIDER', // Sugar glider variations
-        ];
-        
-        const candyMachinePatterns = [
-            'CANDY', // Candy machine tokens
-            'CANDY_GUARD', // Candy guard tokens
-            'CANDYGUARD', // Candy guard variations
-            'GUARD', // Guard tokens
-            'GUARD1', // Guard1 tokens
-            'METAPLEX', // Metaplex tokens
-            'NFT', // NFT related tokens
-            'COLLECTION', // Collection tokens
-            'MASTEREDITION', // Master edition tokens
-            'METADATA', // Metadata tokens
-            'DELEGATE', // Delegate tokens
-            'RECORD', // Token record tokens
-        ];
-        
-        const otherUnwantedPatterns = [
-            'LEND', // Lending tokens
-            'BORROW', // Borrowing tokens
-            'VAULT', // Vault tokens
-            'CPMM', // Raydium CPMM tokens
-            'CREATOR', // Creator pool tokens
-            'POOL', // Pool tokens
-            'METEORA', // Meteora DBC tokens
-            'DBC', // Dynamic Bonding Curve tokens
-            'DYNAMIC', // Dynamic tokens
-            'ATA', // Associated Token Account tokens
-            'TOKENACCOUNT', // Token Account tokens
-            'ATOKEN', // AToken tokens
-        ];
-        
-        // Check if mint contains any of these patterns
-        const upperMint = mint.toUpperCase();
-        return jupiterPatterns.some(pattern => upperMint.includes(pattern)) ||
-               sugarPatterns.some(pattern => upperMint.includes(pattern)) ||
-               candyMachinePatterns.some(pattern => upperMint.includes(pattern)) ||
-               otherUnwantedPatterns.some(pattern => upperMint.includes(pattern));
+    private identifyTokenSource(tx: any, mint: string): string | null {
+        try {
+            // Check for Pump.fun token characteristics
+            if (this.isPumpFunToken(tx, mint)) {
+                return 'pump.fun';
+            }
+            
+            // Check for Bonk.fun token characteristics  
+            if (this.isBonkFunToken(tx, mint)) {
+                return 'bonk.fun';
+            }
+            
+            // Not a Pump.fun or Bonk.fun token
+            return null;
+            
+        } catch (error) {
+            logger.error('Error identifying token source:', error);
+            return null;
+        }
     }
 
-    private isCandyMachineTransaction(tx: any): boolean {
+    private isPumpFunToken(tx: any, _mint: string): boolean {
         try {
-            // Check transaction logs for candy machine indicators
-            const logs = tx.meta?.logMessages || [];
-            const logText = logs.join(' ').toLowerCase();
+            // Official Pump.fun program ID
+            const pumpFunProgramId = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
             
-            // Check for candy machine program indicators
-            const candyMachineIndicators = [
-                'candy machine',
-                'candy guard',
-                'metaplex',
-                'nft mint',
-                'master edition',
-                'collection delegate',
-                'token record',
-                'collection metadata',
-                'nft metadata'
-            ];
-            
-            const hasCandyMachineLogs = candyMachineIndicators.some(indicator => 
-                logText.includes(indicator)
-            );
-            
-            if (hasCandyMachineLogs) {
-                logger.debug(`🚫 Candy machine transaction detected via logs: ${logText.substring(0, 200)}...`);
-                return true;
-            }
-            
-            // Check account keys for candy machine patterns
-            const accountKeys = tx.transaction?.message?.accountKeys || [];
-            const accountKeysText = accountKeys.map((key: any) => key.toString()).join(' ').toLowerCase();
-            
-            // Check for known candy machine program IDs and patterns
-            const candyMachinePrograms = [
-                'cndy3', // Candy Machine Core Program
-                'guard1', // Candy Guard Program
-                'metaqbxx', // Metaplex Token Metadata Program
-                'p1exd', // Metaplex Candy Machine Program
-            ];
-            
-            const hasCandyMachinePrograms = candyMachinePrograms.some(program => 
-                accountKeysText.includes(program)
-            );
-            
-            if (hasCandyMachinePrograms) {
-                logger.debug(`🚫 Candy machine transaction detected via program IDs`);
-                return true;
-            }
-            
-            // Check instruction data for candy machine operations
+            // Check transaction instructions for Pump.fun program
             const instructions = tx.transaction?.message?.instructions || [];
             for (const instruction of instructions) {
                 if (instruction.programId) {
                     const programId = instruction.programId.toString();
-                    // Known candy machine program IDs
-                    if (programId === 'cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ' || // Candy Machine Core
-                        programId === 'Guard1JwRhJkVH6XZhzoYxeBVQe872VH6QggF4BWmS9g' || // Candy Guard
-                        programId === 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s' || // Token Metadata
-                        programId === 'p1exdMJcjVao65QdewkaZRUnU6VPSXhus9n2GzWfh98') { // Candy Machine
-                        logger.debug(`🚫 Candy machine transaction detected via instruction program: ${programId}`);
+                    if (programId === pumpFunProgramId) {
+                        logger.debug(`✅ Pump.fun program detected: ${programId}`);
                         return true;
                     }
                 }
             }
             
+            // Check inner instructions for Pump.fun program
+            for (const inner of tx.meta?.innerInstructions ?? []) {
+                for (const instruction of inner.instructions ?? []) {
+                    if (instruction.programId) {
+                        const programId = instruction.programId.toString();
+                        if (programId === pumpFunProgramId) {
+                            logger.debug(`✅ Pump.fun inner program detected: ${programId}`);
+                            return true;
+                        }
+                    }
+                }
+            }
+            
             return false;
+            
         } catch (error) {
-            logger.error('Error checking candy machine transaction:', error);
+            logger.error('Error checking Pump.fun token:', error);
             return false;
         }
     }
+
+    private isBonkFunToken(_tx: any, _mint: string): boolean {
+        // TODO: Add Bonk.fun program ID when available
+        // For now, we only track Pump.fun tokens
+        return false;
+    }
+
 
 
     private extractMintInfo(tx: any): { mint: string; decimals: number; supply: number; blocktime: number } | null {

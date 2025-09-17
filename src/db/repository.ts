@@ -15,7 +15,8 @@ export class TokenRepository {
         imageUrl?: string,
         bondingCurveAddress?: string,
         isOnCurve: boolean = false,
-        status: 'fresh' | 'active' | 'curve' = 'fresh'
+        status: 'fresh' | 'active' | 'curve' = 'fresh',
+        source: string = 'pump'
     ): Promise<Token> {
         const query = `
             INSERT INTO tokens (
@@ -48,13 +49,11 @@ export class TokenRepository {
         `;
         
         try {
-            const source = 'helius';
-            
             const result = await db.query(query, [
                 mint, 
                 name, 
                 symbol, 
-                source, 
+                source, // Use the source parameter
                 decimals, 
                 supply, 
                 blocktime, 
@@ -589,6 +588,7 @@ export class TokenRepository {
         const result = await db.query(query, [limit]);
         return result.rows;
     }
+
 }
 
 export class MarketCapRepository {
