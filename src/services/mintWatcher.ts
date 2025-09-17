@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 
 // Import wsService dynamically to avoid circular dependency
 let wsService: any = null;
-const getWsService = () => {
+export const getWsService = () => {
     if (!wsService) {
         try {
             wsService = require('../app').wsService;
@@ -184,15 +184,10 @@ export class MintWatcherService {
                 logger.debug('Metadata enricher service not available for immediate enrichment');
             }
             
-            // Broadcast new token to all connected WebSocket clients
+            // DON'T broadcast new token immediately - wait for market data
+            // The background processor will broadcast when market data is available
             if (newToken) {
-                const ws = getWsService();
-                if (ws) {
-                    logger.info(`🔥 Broadcasting new token: ${newToken.mint}`);
-                    ws.broadcastNewToken(newToken);
-                } else {
-                    logger.warn('WebSocket service not available for broadcasting new token');
-                }
+                logger.info(`📝 Token stored, waiting for market data before broadcasting: ${newToken.mint}`);
             }
             
         } catch (error) {

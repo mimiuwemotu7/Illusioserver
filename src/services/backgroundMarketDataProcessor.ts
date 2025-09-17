@@ -101,6 +101,24 @@ export class BackgroundMarketDataProcessor {
                         if (success) {
                             console.log(`✅ BACKGROUND SUCCESS: Market data fetched for ${token.mint.slice(0, 8)}...`);
                             logger.info(`✅ BACKGROUND SUCCESS: Market data fetched for ${token.mint.slice(0, 8)}...`);
+                            
+                            // Broadcast token with market data via WebSocket
+                            try {
+                                // Get the updated token with market data
+                                const { tokenRepository } = await import('../db/repository');
+                                const updatedToken = await tokenRepository.findByMint(token.mint);
+                                if (updatedToken) {
+                                    // Import wsService dynamically to avoid circular dependency
+                                    const { getWsService } = await import('./mintWatcher');
+                                    const ws = getWsService();
+                                    if (ws) {
+                                        ws.broadcastNewToken(updatedToken);
+                                        console.log(`🔥 BACKGROUND: Broadcasted token with market data: ${token.mint.slice(0, 8)}...`);
+                                    }
+                                }
+                            } catch (wsError) {
+                                console.error(`❌ BACKGROUND: WebSocket broadcast failed for ${token.mint.slice(0, 8)}...:`, wsError);
+                            }
                         } else {
                             console.log(`⚠️ BACKGROUND FAILED: No market data for ${token.mint.slice(0, 8)}...`);
                         }
