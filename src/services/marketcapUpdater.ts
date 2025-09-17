@@ -101,7 +101,14 @@ export class MarketcapUpdaterService {
             
             // PRIORITY: Get the 50 most recent fresh tokens that match the frontend display logic
             // This ensures we update exactly what users see in the fresh mints column
-            const freshTokens = await tokenRepository.findFreshTokens(50, 0); // Get exactly 50 most recent fresh tokens
+            let freshTokens;
+            try {
+                freshTokens = await tokenRepository.findFreshTokens(50, 0); // Get exactly 50 most recent fresh tokens
+            } catch (dbError) {
+                console.error('❌ Database error in updateAllTokens:', dbError);
+                logger.error('❌ Database error in updateAllTokens:', dbError);
+                return; // Skip this cycle if database is down
+            }
             
             // Focus ONLY on fresh tokens for maximum speed and coverage
             const targetTokens = freshTokens;

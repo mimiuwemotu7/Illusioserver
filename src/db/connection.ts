@@ -137,8 +137,9 @@ class DatabaseConnection {
 
     private recreatePool(): void {
         try {
+            console.log('Recreating database pool...');
             if (this.pool && !this.pool.ended) {
-                this.pool.end();
+                this.pool.end().catch(e => console.error('Error ending old pool:', e));
             }
         } catch (error) {
             console.error('Error closing old pool:', error);
@@ -165,6 +166,15 @@ class DatabaseConnection {
             // Add query timeout to prevent hanging queries
             statement_timeout: 30000, // Increased to 30 seconds for complex queries
             query_timeout: 30000, // Increased to 30 seconds for complex queries
+        });
+
+        // Re-add event listeners
+        this.pool.on('error', (err) => {
+            console.error('Unexpected error on idle client', err);
+        });
+
+        this.pool.on('remove', () => {
+            console.log('Database client removed - pool may need recreation');
         });
         
         console.log('Database pool recreated successfully');
