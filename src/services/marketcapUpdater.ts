@@ -146,8 +146,12 @@ export class MarketcapUpdaterService {
                 });
                 
                 // Start processing the queue if not already processing
+                console.log(`Queue status: isProcessing=${this.isProcessingQueue}, queueLength=${this.requestQueue.length}`);
                 if (!this.isProcessingQueue) {
+                    console.log('Starting queue processing...');
                     this.processQueue();
+                } else {
+                    console.log('Queue already processing, skipping...');
                 }
             } else {
                 console.log('⚠️ No target tokens found for marketcap updates');
@@ -163,11 +167,14 @@ export class MarketcapUpdaterService {
 
 
     private async processQueue(): Promise<void> {
+        console.log(`processQueue called: isProcessing=${this.isProcessingQueue}, queueLength=${this.requestQueue.length}`);
         if (this.isProcessingQueue || this.requestQueue.length === 0) {
+            console.log('processQueue: returning early - already processing or empty queue');
             return;
         }
 
         this.isProcessingQueue = true;
+        console.log(`Processing rate-limited queue: ${this.requestQueue.length} requests pending`);
         logger.info(`Processing rate-limited queue: ${this.requestQueue.length} requests pending`);
 
         while (this.requestQueue.length > 0) {
@@ -181,6 +188,7 @@ export class MarketcapUpdaterService {
                         await new Promise(resolve => setTimeout(resolve, waitTime));
                     }
 
+                    console.log(`Executing queue request: ${this.requestQueue.length} remaining`);
                     await request();
                     this.lastRequestTime = Date.now();
                     
@@ -538,6 +546,7 @@ export class MarketcapUpdaterService {
         try {
             if (tokens.length === 0) return;
             
+            console.log(`🚀 BATCH UPDATE for ${tokens.length} tokens`);
             logger.info(`🚀 BATCH UPDATE for ${tokens.length} tokens`);
             
             // Check cache first for instant results
