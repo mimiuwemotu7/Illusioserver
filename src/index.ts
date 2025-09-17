@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { Connection } from '@solana/web3.js';
-import { server, wsService } from './app';
+import { server } from './app';
 import { MintWatcherService } from './services/mintWatcher';
-import { MarketcapUpdaterService } from './services/marketcapUpdater';
+import { SimpleMarketcapUpdaterService } from './services/simpleMarketcapUpdater';
 import { MetadataEnricherService } from './services/metadataEnricherService';
 import { TokenStatusUpdaterService } from './services/tokenStatusUpdater';
 import { HolderIndexer } from './services/holderIndexer';
@@ -19,6 +19,7 @@ const PORT = process.env.PORT || 8080;
 
 // Get required environment variables
 const HELIUS_RPC_URL = process.env.HELIUS_RPC_URL;
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
 
 if (!HELIUS_RPC_URL) {
@@ -31,10 +32,15 @@ if (!BIRDEYE_API_KEY) {
     logger.warn('⚠️ Set BIRDEYE_API_KEY environment variable to enable market data fetching');
 }
 
+if (!HELIUS_API_KEY) {
+    logger.warn('⚠️ HELIUS_API_KEY not found - Helius fallback will not be available');
+    logger.warn('⚠️ Set HELIUS_API_KEY environment variable to enable Helius fallback');
+}
+
 // Initialize services
 const connection = new Connection(HELIUS_RPC_URL, 'confirmed');
-const mintWatcher = new MintWatcherService(HELIUS_RPC_URL);
-const marketcapUpdater = new MarketcapUpdaterService(BIRDEYE_API_KEY, wsService);
+const mintWatcher = new MintWatcherService(HELIUS_RPC_URL, BIRDEYE_API_KEY, HELIUS_API_KEY);
+const marketcapUpdater = new SimpleMarketcapUpdaterService(BIRDEYE_API_KEY, HELIUS_API_KEY);
 const metadataEnricher = new MetadataEnricherService(connection, tokenRepository);
 const tokenStatusUpdater = new TokenStatusUpdaterService();
 const holderIndexer = new HolderIndexer(connection, tokenRepository);

@@ -2,6 +2,8 @@ import { Connection } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { tokenRepository } from '../db/repository';
 import { logger } from '../utils/logger';
+import { MarketDataService } from './marketDataService';
+
 // Import wsService dynamically to avoid circular dependency
 let wsService: any = null;
 const getWsService = () => {
@@ -19,8 +21,9 @@ export class MintWatcherService {
     private connection: Connection;
     private isRunning: boolean = false;
     private subscriptionId: number | null = null;
+    private marketDataService: MarketDataService;
 
-    constructor(rpcUrl: string) {
+    constructor(rpcUrl: string, birdeyeApiKey: string, heliusApiKey: string) {
         // Use multiple RPC endpoints for better reliability
         const rpcUrls = [
             rpcUrl,
@@ -35,6 +38,9 @@ export class MintWatcherService {
                 'User-Agent': 'Solana-Token-Tracker/1.0'
             }
         });
+        
+        // Initialize market data service for immediate API calls
+        this.marketDataService = new MarketDataService(birdeyeApiKey, heliusApiKey);
     }
 
     async start(): Promise<void> {
@@ -167,6 +173,26 @@ export class MintWatcherService {
 
             logger.info(`Successfully processed mint: ${mintInfo.mint} (${mintInfo.decimals} decimals)`);
             
+            // IMMEDIATE market data fetching - this is the key change!
+            console.log(`🚀 IMMEDIATE MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            logger.info(`🚀 IMMEDIATE MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            
+            try {
+                // Fetch market data immediately (non-blocking)
+                const marketDataSuccess = await this.marketDataService.fetchMarketDataImmediately(mintInfo.mint, newToken.id);
+                
+                if (marketDataSuccess) {
+                    console.log(`✅ IMMEDIATE MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                    logger.info(`✅ IMMEDIATE MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                } else {
+                    console.log(`❌ IMMEDIATE MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+                    logger.warn(`❌ IMMEDIATE MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+                }
+            } catch (error) {
+                console.error(`❌ Error in immediate market data fetch for ${mintInfo.mint}:`, error);
+                logger.error(`❌ Error in immediate market data fetch for ${mintInfo.mint}:`, error);
+            }
+            
             // IMMEDIATE metadata enrichment for fresh mint
             try {
                 const metadataEnricher = require('./metadataEnricherService').metadataEnricherService;
@@ -188,22 +214,6 @@ export class MintWatcherService {
                     ws.broadcastNewToken(newToken);
                 } else {
                     logger.warn('WebSocket service not available for broadcasting new token');
-                }
-                
-                // Trigger immediate market cap update for fresh mint
-                try {
-                    const marketcapUpdater = require('./marketcapUpdaterService').marketcapUpdaterService;
-                    if (marketcapUpdater) {
-                        // Trigger immediate marketcap update (non-blocking)
-                        marketcapUpdater.updateTokenMarketcapImmediately(newToken.mint, newToken.id).catch((error: any) => {
-                            logger.debug(`Immediate marketcap update failed for ${newToken.mint}:`, error);
-                        });
-                        logger.info(`📊 Fresh mint ${newToken.mint} queued for immediate market cap update`);
-                    } else {
-                        logger.info(`📊 Fresh mint ${newToken.mint} will be prioritized for market cap update`);
-                    }
-                } catch (error) {
-                    logger.debug('Market cap updater service not available for immediate update');
                 }
             }
             
