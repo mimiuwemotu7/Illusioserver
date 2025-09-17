@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { Connection } from '@solana/web3.js';
 import { server } from './app';
 import { MintWatcherService } from './services/mintWatcher';
-import { SimpleMarketcapUpdaterService } from './services/simpleMarketcapUpdater';
+// import { SimpleMarketcapUpdaterService } from './services/simpleMarketcapUpdater'; // DISABLED - using on-demand fetching
 import { MetadataEnricherService } from './services/metadataEnricherService';
 import { TokenStatusUpdaterService } from './services/tokenStatusUpdater';
 import { HolderIndexer } from './services/holderIndexer';
@@ -40,7 +40,7 @@ if (!HELIUS_API_KEY) {
 // Initialize services
 const connection = new Connection(HELIUS_RPC_URL, 'confirmed');
 const mintWatcher = new MintWatcherService(HELIUS_RPC_URL, BIRDEYE_API_KEY, HELIUS_API_KEY);
-const marketcapUpdater = new SimpleMarketcapUpdaterService(BIRDEYE_API_KEY, HELIUS_API_KEY);
+// const marketcapUpdater = new SimpleMarketcapUpdaterService(BIRDEYE_API_KEY, HELIUS_API_KEY); // DISABLED
 const metadataEnricher = new MetadataEnricherService(connection, tokenRepository);
 const tokenStatusUpdater = new TokenStatusUpdaterService();
 const holderIndexer = new HolderIndexer(connection, tokenRepository);
@@ -70,7 +70,7 @@ const gracefulShutdown = async (signal: string) => {
     try {
         // Stop all services
         await mintWatcher.stop();
-        await marketcapUpdater.stop();
+        // await marketcapUpdater.stop(); // DISABLED
         await metadataEnricher.stop();
         await tokenStatusUpdater.stop();
         holderIndexer.stop();
@@ -151,19 +151,10 @@ const startServer = async () => {
                     logger.error('❌ Failed to start Mint Watcher:', error);
                 }
                 
-                // Start marketcap updater service (DISABLED - using on-demand fetching instead)
-                try {
-                    console.log('🔍 Starting Simple Marketcap Updater service...');
-                    logger.info('🔍 Starting Simple Marketcap Updater service...');
-                    await marketcapUpdater.start();
-                    globalThis.marketcapUpdaterStatus = 'running';
-                    console.log('✅ Simple Marketcap Updater: Background updates every 30s (on-demand primary)');
-                    logger.info('✅ Simple Marketcap Updater: Background updates every 30s (on-demand primary)');
-                } catch (error) {
-                    globalThis.marketcapUpdaterStatus = 'failed';
-                    console.error('❌ Failed to start Simple Marketcap Updater:', error);
-                    logger.error('❌ Failed to start Simple Marketcap Updater:', error);
-                }
+                // Marketcap updater service DISABLED - using on-demand fetching only
+                console.log('⏸️ Marketcap Updater: DISABLED - using on-demand fetching only');
+                logger.info('⏸️ Marketcap Updater: DISABLED - using on-demand fetching only');
+                globalThis.marketcapUpdaterStatus = 'disabled';
                 
                 // Start metadata enricher service
                 try {
