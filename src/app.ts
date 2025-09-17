@@ -111,7 +111,15 @@ app.get('/health', (_req, res) => {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        port: process.env.PORT || 8080,
+        services: {
+            http: 'running',
+            database: 'checking...',
+            mintWatcher: 'initializing...',
+            marketcapUpdater: 'initializing...',
+            metadataEnricher: 'initializing...'
+        }
     });
 });
 

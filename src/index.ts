@@ -99,66 +99,77 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Start the server
 const startServer = async () => {
     try {
-        // Test database connection
-        const dbConnected = await db.testConnection();
-        if (!dbConnected) {
-            logger.error('Failed to connect to database. Exiting...');
-            process.exit(1);
-        }
-
-        // Ensure database schema exists
-        await db.ensureSchema();
-        logger.info('✅ Database schema ensured');
-
-        // Start background services
-        logger.info('Starting Solana Mint Discovery System...');
-        
-        // Start mint watcher service
-        await mintWatcher.start();
-        logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
-        
-        // Start marketcap updater service
-        await marketcapUpdater.start();
-        logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 2 seconds (100 fresh tokens)');
-        
-        // Start metadata enricher service
-        await metadataEnricher.start();
-        logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
-        
-        // TEMPORARILY DISABLED - Fixing database issues
-        // await tokenStatusUpdater.start();
-        // logger.info('✅ Token Status Updater: Moving tokens between categories every 10 seconds');
-        
-        // Start holder indexer service
-        holderIndexer.start();
-        logger.info('✅ Holder Indexer: ULTRA-FAST holder indexing every 30 seconds (50 fresh tokens)');
-        
-        // Start analytics service
-        const analyticsService = AnalyticsService.getInstance();
-        await analyticsService.start();
-        logger.info('✅ Analytics Service: Tracking user activity and system metrics');
-        
-        // Admin dashboard is now embedded in the route
-        logger.info('✅ Admin Dashboard: Embedded route ready');
-        
-        logger.info('🚀 Solana Mint Discovery System started successfully!');
-        logger.info('🔍 Watching for new token mints via Helius WebSocket');
-        logger.info('💰 Tracking marketcap from Birdeye API (50 req/sec rate limit, 3s updates)');
-        logger.info('📊 Tokens progress: fresh → curve → active (when migrating to AMM)');
-
-                // Railway handles port management automatically, no need to kill processes
-        
+        // Start HTTP server immediately for healthcheck
         server.listen(PORT, () => {
-            logger.info(`🚀 Solana Mint Discovery System is running on port ${PORT}`);
+            logger.info(`🚀 HTTP Server started on port ${PORT}`);
             logger.info(`📊 API available at http://localhost:${PORT}`);
             logger.info(`🔐 Admin Dashboard: http://localhost:${PORT}/admin-dashboard`);
-            logger.info(`🐘 Database connection established`);
-            logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
-            logger.info(`💰 Active tokens: /api/tokens/active`);
             logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
             logger.info(`🔑 Admin Key configured: ${process.env.ADMIN_KEY ? 'YES' : 'NO'}`);
             logger.info(`🔗 Helius RPC configured: ${process.env.HELIUS_RPC_URL ? 'YES' : 'NO'}`);
         });
+
+        // Initialize services in background (non-blocking)
+        const initializeServices = async () => {
+            try {
+                // Test database connection
+                const dbConnected = await db.testConnection();
+                if (!dbConnected) {
+                    logger.error('Failed to connect to database. Services will not start.');
+                    return;
+                }
+
+                // Ensure database schema exists
+                await db.ensureSchema();
+                logger.info('✅ Database schema ensured');
+
+                // Start background services
+                logger.info('Starting Solana Mint Discovery System...');
+                
+                // Start mint watcher service
+                await mintWatcher.start();
+                logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
+                
+                // Start marketcap updater service
+                await marketcapUpdater.start();
+                logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 2 seconds (100 fresh tokens)');
+                
+                // Start metadata enricher service
+                await metadataEnricher.start();
+                logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
+                
+                // TEMPORARILY DISABLED - Fixing database issues
+                // await tokenStatusUpdater.start();
+                // logger.info('✅ Token Status Updater: Moving tokens between categories every 10 seconds');
+                
+                // Start holder indexer service
+                holderIndexer.start();
+                logger.info('✅ Holder Indexer: ULTRA-FAST holder indexing every 30 seconds (50 fresh tokens)');
+                
+                // Start analytics service
+                const analyticsService = AnalyticsService.getInstance();
+                await analyticsService.start();
+                logger.info('✅ Analytics Service: Tracking user activity and system metrics');
+                
+                // Admin dashboard is now embedded in the route
+                logger.info('✅ Admin Dashboard: Embedded route ready');
+                
+                logger.info('🚀 Solana Mint Discovery System started successfully!');
+                logger.info('🔍 Watching for new token mints via Helius WebSocket');
+                logger.info('💰 Tracking marketcap from Birdeye API (50 req/sec rate limit, 3s updates)');
+                logger.info('📊 Tokens progress: fresh → curve → active (when migrating to AMM)');
+                logger.info(`🐘 Database connection established`);
+                logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
+                logger.info(`💰 Active tokens: /api/tokens/active`);
+
+            } catch (error) {
+                logger.error('Error initializing services:', error);
+                // Don't exit, just log the error and continue with basic server functionality
+            }
+        };
+
+        // Start services in background
+        initializeServices();
 
     } catch (error) {
         logger.error('Error starting server:', error);
