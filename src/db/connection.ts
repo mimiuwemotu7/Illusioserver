@@ -37,6 +37,11 @@ class DatabaseConnection {
             // Don't exit the process, just log the error and continue
             // The pool will handle reconnection automatically
         });
+
+        // Handle pool end events - use 'remove' event instead
+        this.pool.on('remove', () => {
+            console.log('Database client removed - pool may need recreation');
+        });
     }
 
     public static getInstance(): DatabaseConnection {
@@ -170,6 +175,7 @@ class DatabaseConnection {
             await this.pool.end();
         }
     }
+
 
     public async testConnection(): Promise<boolean> {
         try {
