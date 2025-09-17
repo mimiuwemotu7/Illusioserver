@@ -101,6 +101,9 @@ export class AnalyticsService {
     // Track API call
     async trackApiCall(sessionId: string, endpoint: string, method: string, responseTime?: number, statusCode?: number, errorMessage?: string): Promise<void> {
         try {
+            // First ensure the session exists
+            await this.ensureSessionExists(sessionId);
+
             const query = `
                 INSERT INTO api_calls (session_id, endpoint, method, response_time, status_code, error_message)
                 VALUES ($1, $2, $3, $4, $5, $6)
@@ -122,9 +125,33 @@ export class AnalyticsService {
         }
     }
 
+    // Ensure session exists before tracking API calls
+    private async ensureSessionExists(sessionId: string): Promise<void> {
+        try {
+            // Check if session exists
+            const checkQuery = `SELECT session_id FROM user_sessions WHERE session_id = $1`;
+            const result = await db.query(checkQuery, [sessionId]);
+            
+            if (result.rows.length === 0) {
+                // Create session if it doesn't exist
+                const insertQuery = `
+                    INSERT INTO user_sessions (session_id, ip_address, user_agent, created_at, last_activity)
+                    VALUES ($1, 'unknown', 'unknown', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    ON CONFLICT (session_id) DO NOTHING
+                `;
+                await db.query(insertQuery, [sessionId]);
+            }
+        } catch (error: any) {
+            logger.warn('Error ensuring session exists:', error.message);
+        }
+    }
+
     // Track feature usage
     async trackFeatureUsage(sessionId: string, featureName: string, action: string, metadata?: any): Promise<void> {
         try {
+            // First ensure the session exists
+            await this.ensureSessionExists(sessionId);
+
             const query = `
                 INSERT INTO feature_usage (session_id, feature_name, action, metadata)
                 VALUES ($1, $2, $3, $4)
