@@ -39,6 +39,12 @@ export class MarketcapUpdaterService {
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
             logger.info(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             
+            if (!this.birdeyeApiKey) {
+                logger.warn('⚠️ No Birdeye API key - marketcap updater will not fetch market data');
+                logger.warn('⚠️ Set BIRDEYE_API_KEY environment variable to enable market data fetching');
+                return;
+            }
+            
             // Start the update loop (ULTRA FAST for fresh mints)
             this.intervalId = setInterval(async () => {
                 logger.info('⏰ Marketcap update cycle triggered');

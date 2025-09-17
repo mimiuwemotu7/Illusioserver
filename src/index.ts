@@ -27,8 +27,8 @@ if (!HELIUS_RPC_URL) {
 }
 
 if (!BIRDEYE_API_KEY) {
-    logger.error('BIRDEYE_API_KEY environment variable is required');
-    process.exit(1);
+    logger.warn('⚠️ BIRDEYE_API_KEY not found - market data will not be available');
+    logger.warn('⚠️ Set BIRDEYE_API_KEY environment variable to enable market data fetching');
 }
 
 // Initialize services
