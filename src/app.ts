@@ -107,19 +107,38 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
+    // Get service status from global variables
+    const serviceStatus = {
+        http: 'running',
+        database: 'checking...',
+        mintWatcher: 'initializing...',
+        marketcapUpdater: 'initializing...',
+        metadataEnricher: 'initializing...'
+    };
+
+    // Try to get actual service status
+    try {
+        // Check if services are available globally
+        if (global.mintWatcherStatus) {
+            serviceStatus.mintWatcher = global.mintWatcherStatus;
+        }
+        if (global.marketcapUpdaterStatus) {
+            serviceStatus.marketcapUpdater = global.marketcapUpdaterStatus;
+        }
+        if (global.metadataEnricherStatus) {
+            serviceStatus.metadataEnricher = global.metadataEnricherStatus;
+        }
+    } catch (error) {
+        // Ignore errors, use default status
+    }
+
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
         port: process.env.PORT || 8080,
-        services: {
-            http: 'running',
-            database: 'checking...',
-            mintWatcher: 'initializing...',
-            marketcapUpdater: 'initializing...',
-            metadataEnricher: 'initializing...'
-        }
+        services: serviceStatus
     });
 });
 

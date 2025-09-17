@@ -39,19 +39,23 @@ export class MarketcapUpdaterService {
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
             logger.info(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             
-            if (!this.birdeyeApiKey) {
+            if (!this.birdeyeApiKey || this.birdeyeApiKey === 'your_birdeye_api_key_here') {
                 logger.warn('⚠️ No Birdeye API key - marketcap updater will not fetch market data');
                 logger.warn('⚠️ Set BIRDEYE_API_KEY environment variable to enable market data fetching');
-                return;
+                // Don't return - start the service anyway for fallback APIs
             }
             
             // Start the update loop (ULTRA FAST for fresh mints)
             this.intervalId = setInterval(async () => {
-                logger.info('⏰ Marketcap update cycle triggered');
-                await this.updateAllTokens();
-                
-                // Clean up expired cache entries
-                this.cleanupCache();
+                try {
+                    logger.info('⏰ Marketcap update cycle triggered');
+                    await this.updateAllTokens();
+                    
+                    // Clean up expired cache entries
+                    this.cleanupCache();
+                } catch (error) {
+                    logger.error('❌ Error in marketcap update cycle:', error);
+                }
             }, 500); // 500ms - ULTRA FAST updates for fresh mints
 
             this.isRunning = true;
@@ -59,7 +63,7 @@ export class MarketcapUpdaterService {
             
         } catch (error) {
             logger.error('❌ Failed to start marketcap updater service:', error);
-            throw error;
+            // Don't throw error - let other services start
         }
     }
 

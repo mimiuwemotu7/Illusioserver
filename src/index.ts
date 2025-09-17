@@ -112,58 +112,92 @@ const startServer = async () => {
         // Initialize services in background (non-blocking)
         const initializeServices = async () => {
             try {
+                logger.info('🔄 Starting service initialization...');
+                
                 // Test database connection
+                logger.info('🔍 Testing database connection...');
                 const dbConnected = await db.testConnection();
                 if (!dbConnected) {
-                    logger.error('Failed to connect to database. Services will not start.');
+                    logger.error('❌ Failed to connect to database. Services will not start.');
+                    logger.error('❌ Check DATABASE_URL environment variable and PostgreSQL service status');
                     return;
                 }
+                logger.info('✅ Database connection successful');
 
                 // Ensure database schema exists
+                logger.info('🔍 Ensuring database schema...');
                 await db.ensureSchema();
                 logger.info('✅ Database schema ensured');
 
-                // Start background services
-                logger.info('Starting Solana Mint Discovery System...');
+                // Start background services with individual error handling
+                logger.info('🚀 Starting Solana Mint Discovery System...');
                 
                 // Start mint watcher service
-                await mintWatcher.start();
-                logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
+                try {
+                    logger.info('🔍 Starting Mint Watcher service...');
+                    await mintWatcher.start();
+                    global.mintWatcherStatus = 'running';
+                    logger.info('✅ Mint Watcher: Real-time InitializeMint detection');
+                } catch (error) {
+                    global.mintWatcherStatus = 'failed';
+                    logger.error('❌ Failed to start Mint Watcher:', error);
+                }
                 
                 // Start marketcap updater service
-                await marketcapUpdater.start();
-                logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 2 seconds (100 fresh tokens)');
+                try {
+                    logger.info('🔍 Starting Marketcap Updater service...');
+                    await marketcapUpdater.start();
+                    global.marketcapUpdaterStatus = 'running';
+                    logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
+                } catch (error) {
+                    global.marketcapUpdaterStatus = 'failed';
+                    logger.error('❌ Failed to start Marketcap Updater:', error);
+                }
                 
                 // Start metadata enricher service
-                await metadataEnricher.start();
-                logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
-                
-                // TEMPORARILY DISABLED - Fixing database issues
-                // await tokenStatusUpdater.start();
-                // logger.info('✅ Token Status Updater: Moving tokens between categories every 10 seconds');
+                try {
+                    logger.info('🔍 Starting Metadata Enricher service...');
+                    await metadataEnricher.start();
+                    global.metadataEnricherStatus = 'running';
+                    logger.info('✅ Metadata Enricher: ULTRA-FAST enrichment every 2 seconds (100 tokens)');
+                } catch (error) {
+                    global.metadataEnricherStatus = 'failed';
+                    logger.error('❌ Failed to start Metadata Enricher:', error);
+                }
                 
                 // Start holder indexer service
-                holderIndexer.start();
-                logger.info('✅ Holder Indexer: ULTRA-FAST holder indexing every 30 seconds (50 fresh tokens)');
+                try {
+                    logger.info('🔍 Starting Holder Indexer service...');
+                    holderIndexer.start();
+                    logger.info('✅ Holder Indexer: ULTRA-FAST holder indexing every 30 seconds (50 fresh tokens)');
+                } catch (error) {
+                    logger.error('❌ Failed to start Holder Indexer:', error);
+                }
                 
                 // Start analytics service
-                const analyticsService = AnalyticsService.getInstance();
-                await analyticsService.start();
-                logger.info('✅ Analytics Service: Tracking user activity and system metrics');
+                try {
+                    logger.info('🔍 Starting Analytics service...');
+                    const analyticsService = AnalyticsService.getInstance();
+                    await analyticsService.start();
+                    logger.info('✅ Analytics Service: Tracking user activity and system metrics');
+                } catch (error) {
+                    logger.error('❌ Failed to start Analytics service:', error);
+                }
                 
                 // Admin dashboard is now embedded in the route
                 logger.info('✅ Admin Dashboard: Embedded route ready');
                 
                 logger.info('🚀 Solana Mint Discovery System started successfully!');
                 logger.info('🔍 Watching for new token mints via Helius WebSocket');
-                logger.info('💰 Tracking marketcap from Birdeye API (50 req/sec rate limit, 3s updates)');
+                logger.info('💰 Tracking marketcap from Birdeye API (100 req/sec rate limit, 500ms updates)');
                 logger.info('📊 Tokens progress: fresh → curve → active (when migrating to AMM)');
                 logger.info(`🐘 Database connection established`);
                 logger.info(`🔍 Fresh mints: /api/tokens/fresh`);
                 logger.info(`💰 Active tokens: /api/tokens/active`);
 
             } catch (error) {
-                logger.error('Error initializing services:', error);
+                logger.error('❌ Critical error initializing services:', error);
+                logger.error('❌ Service initialization failed - check logs above for specific errors');
                 // Don't exit, just log the error and continue with basic server functionality
             }
         };
