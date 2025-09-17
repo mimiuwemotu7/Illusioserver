@@ -17,7 +17,7 @@ export class MarketcapUpdaterService {
     private requestQueue: Array<() => Promise<void>> = [];
     private isProcessingQueue: boolean = false;
     private lastRequestTime: number = 0;
-    private readonly RATE_LIMIT_MS = 10; // 10ms between requests (100 req/sec - Birdeye Business plan limit)
+    private readonly RATE_LIMIT_MS = 5; // 5ms between requests (200 req/sec - faster processing)
     
     // Smart caching for 200+ users
     private marketDataCache: Map<string, { data: MarketData; timestamp: number }> = new Map();
@@ -146,10 +146,16 @@ export class MarketcapUpdaterService {
                 
                 // Process each batch with rate limiting
                 batches.forEach((batch, batchIndex) => {
-                    this.requestQueue.push(async () => {
-                        logger.info(`🔄 Processing batch ${batchIndex + 1}/${batches.length} with ${batch.length} tokens`);
-                        await this.updateBatchMarketcap(batch);
-                    });
+                    // Limit queue size to prevent infinite growth
+                    if (this.requestQueue.length < 50) { // Max 50 requests in queue
+                        this.requestQueue.push(async () => {
+                            logger.info(`🔄 Processing batch ${batchIndex + 1}/${batches.length} with ${batch.length} tokens`);
+                            await this.updateBatchMarketcap(batch);
+                        });
+                    } else {
+                        console.log(`⚠️ Queue full (${this.requestQueue.length}), skipping batch ${batchIndex + 1}`);
+                        logger.warn(`⚠️ Queue full (${this.requestQueue.length}), skipping batch ${batchIndex + 1}`);
+                    }
                 });
                 
                 // Start processing the queue if not already processing
@@ -199,8 +205,9 @@ export class MarketcapUpdaterService {
                     await request();
                     this.lastRequestTime = Date.now();
                     
-                    // Log progress every 10 requests
-                    if (this.requestQueue.length % 10 === 0) {
+                    // Log progress every 5 requests for better visibility
+                    if (this.requestQueue.length % 5 === 0) {
+                        console.log(`Queue progress: ${this.requestQueue.length} requests remaining`);
                         logger.info(`Queue progress: ${this.requestQueue.length} requests remaining`);
                     }
                 } catch (error) {
