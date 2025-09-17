@@ -112,6 +112,7 @@ const startServer = async () => {
         // Initialize services in background (non-blocking)
         const initializeServices = async () => {
             try {
+                console.log('🔄 Starting service initialization...');
                 logger.info('🔄 Starting service initialization...');
                 
                 // Test database connection
@@ -130,6 +131,7 @@ const startServer = async () => {
                 logger.info('✅ Database schema ensured');
 
                 // Start background services with individual error handling
+                console.log('🚀 Starting Solana Mint Discovery System...');
                 logger.info('🚀 Starting Solana Mint Discovery System...');
                 
                 // Start mint watcher service
@@ -145,12 +147,15 @@ const startServer = async () => {
                 
                 // Start marketcap updater service
                 try {
+                    console.log('🔍 Starting Marketcap Updater service...');
                     logger.info('🔍 Starting Marketcap Updater service...');
                     await marketcapUpdater.start();
                     globalThis.marketcapUpdaterStatus = 'running';
+                    console.log('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
                     logger.info('✅ Marketcap Updater: ULTRA-FAST updates every 500ms (50 fresh tokens)');
                 } catch (error) {
                     globalThis.marketcapUpdaterStatus = 'failed';
+                    console.error('❌ Failed to start Marketcap Updater:', error);
                     logger.error('❌ Failed to start Marketcap Updater:', error);
                 }
                 

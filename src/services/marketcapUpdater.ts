@@ -35,8 +35,11 @@ export class MarketcapUpdaterService {
         }
 
         try {
+            console.log('🚀 Starting marketcap updater service...');
             logger.info('🚀 Starting marketcap updater service...');
+            console.log(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
             logger.info(`🔑 Birdeye API Key configured: ${this.birdeyeApiKey ? 'YES' : 'NO'}`);
+            console.log(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             logger.info(`🔑 Birdeye API Key (first 10 chars): ${this.birdeyeApiKey ? this.birdeyeApiKey.substring(0, 10) + '...' : 'NOT SET'}`);
             
             if (!this.birdeyeApiKey || this.birdeyeApiKey === 'your_birdeye_api_key_here') {
@@ -59,6 +62,7 @@ export class MarketcapUpdaterService {
             }, 500); // 500ms - ULTRA FAST updates for fresh mints
 
             this.isRunning = true;
+            console.log('✅ Marketcap updater service started successfully');
             logger.info('✅ Marketcap updater service started successfully');
             
         } catch (error) {
