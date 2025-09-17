@@ -171,28 +171,37 @@ export class MintWatcherService {
 
             logger.info(`Successfully processed mint: ${mintInfo.mint} (${mintInfo.decimals} decimals)`);
             
-            // ULTRA-FAST market data fetching - completely non-blocking!
-            console.log(`⚡ ULTRA-FAST MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
-            logger.info(`⚡ ULTRA-FAST MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            // SMART DELAYED market data fetching - wait for indexing!
+            console.log(`⏰ SMART DELAYED MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            logger.info(`⏰ SMART DELAYED MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
             
-            // Use setImmediate to make this truly non-blocking
-            setImmediate(async () => {
+            // Calculate delay based on token source
+            const delayMs = this.getIndexingDelay(tokenSource);
+            console.log(`⏳ Waiting ${delayMs}ms for ${tokenSource.toUpperCase()} token indexing...`);
+            
+            // Use setTimeout to delay the API call
+            setTimeout(async () => {
                 try {
-                    // Fetch market data immediately (non-blocking)
+                    console.log(`🚀 DELAYED MARKET DATA FETCH starting for ${mintInfo.mint}`);
+                    
+                    // Fetch market data after delay (non-blocking)
                     const marketDataSuccess = await this.marketDataService.fetchMarketDataImmediately(mintInfo.mint, newToken.id);
                     
                     if (marketDataSuccess) {
-                        console.log(`⚡ ULTRA-FAST MARKET DATA SUCCESS for ${mintInfo.mint}`);
-                        logger.info(`⚡ ULTRA-FAST MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                        console.log(`✅ DELAYED MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                        logger.info(`✅ DELAYED MARKET DATA SUCCESS for ${mintInfo.mint}`);
                     } else {
-                        console.log(`❌ ULTRA-FAST MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
-                        logger.warn(`❌ ULTRA-FAST MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+                        console.log(`⚠️ DELAYED MARKET DATA FAILED for ${mintInfo.mint} - may need more time to index`);
+                        logger.warn(`⚠️ DELAYED MARKET DATA FAILED for ${mintInfo.mint} - may need more time to index`);
+                        
+                        // Retry after additional delay
+                        this.scheduleRetry(mintInfo.mint, newToken.id, tokenSource);
                     }
                 } catch (error) {
-                    console.error(`❌ Error in ultra-fast market data fetch for ${mintInfo.mint}:`, error);
-                    logger.error(`❌ Error in ultra-fast market data fetch for ${mintInfo.mint}:`, error);
+                    console.error(`❌ Error in delayed market data fetch for ${mintInfo.mint}:`, error);
+                    logger.error(`❌ Error in delayed market data fetch for ${mintInfo.mint}:`, error);
                 }
-            });
+            }, delayMs);
             
             // IMMEDIATE metadata enrichment for fresh mint
             try {
@@ -286,6 +295,51 @@ export class MintWatcherService {
         // TODO: Add Bonk.fun program ID when available
         // For now, we only track Pump.fun tokens
         return false;
+    }
+
+    /**
+     * Calculate optimal delay for token indexing based on source
+     */
+    private getIndexingDelay(tokenSource: string): number {
+        switch (tokenSource) {
+            case 'pump.fun':
+                // Pump.fun tokens are usually indexed quickly by Birdeye
+                return 2000; // 2 seconds
+            case 'bonk.fun':
+                // Bonk.fun tokens might take a bit longer
+                return 3000; // 3 seconds
+            default:
+                // Default delay for unknown sources
+                return 2500; // 2.5 seconds
+        }
+    }
+
+    /**
+     * Schedule a retry for tokens that failed initial indexing
+     */
+    private scheduleRetry(mint: string, tokenId: number, tokenSource: string): void {
+        const retryDelay = this.getIndexingDelay(tokenSource) * 2; // Double the initial delay
+        
+        console.log(`🔄 Scheduling retry for ${mint.slice(0, 8)}... in ${retryDelay}ms`);
+        
+        setTimeout(async () => {
+            try {
+                console.log(`🔄 RETRY MARKET DATA FETCH for ${mint.slice(0, 8)}...`);
+                
+                const marketDataSuccess = await this.marketDataService.fetchMarketDataImmediately(mint, tokenId);
+                
+                if (marketDataSuccess) {
+                    console.log(`✅ RETRY SUCCESS for ${mint.slice(0, 8)}...`);
+                    logger.info(`✅ RETRY SUCCESS for ${mint.slice(0, 8)}...`);
+                } else {
+                    console.log(`⚠️ RETRY FAILED for ${mint.slice(0, 8)}... - token may need more time`);
+                    logger.warn(`⚠️ RETRY FAILED for ${mint.slice(0, 8)}... - token may need more time`);
+                }
+            } catch (error) {
+                console.error(`❌ Error in retry market data fetch for ${mint}:`, error);
+                logger.error(`❌ Error in retry market data fetch for ${mint}:`, error);
+            }
+        }, retryDelay);
     }
 
 

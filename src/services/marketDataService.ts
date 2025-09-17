@@ -72,7 +72,8 @@ export class MarketDataService {
                 return true;
             }
 
-            console.log(`❌ All APIs failed for ${mint.slice(0, 8)}...`);
+            console.log(`⚠️ All APIs failed for ${mint.slice(0, 8)}... - token may be too new to be indexed`);
+            console.log(`💡 This is normal for very fresh tokens - they will be indexed within minutes`);
             return false;
 
         } catch (error) {
@@ -127,6 +128,19 @@ export class MarketDataService {
             }
             
             const tokenData = data.data;
+            
+            // Check if we have any meaningful data (not all nulls)
+            const hasPrice = tokenData.price && tokenData.price > 0;
+            const hasMarketCap = tokenData.marketCap && tokenData.marketCap > 0;
+            const hasVolume = tokenData.v24hUSD && tokenData.v24hUSD > 0;
+            const hasLiquidity = tokenData.liquidity && tokenData.liquidity > 0;
+            
+            // If all data is null/zero, this token isn't indexed yet
+            if (!hasPrice && !hasMarketCap && !hasVolume && !hasLiquidity) {
+                console.log(`⚠️ Birdeye: Token ${mint.slice(0, 8)}... not indexed yet (all data null)`);
+                return null;
+            }
+            
             const marketData: MarketData = {
                 price_usd: tokenData.price || 0,
                 marketcap: tokenData.marketCap || 0,
@@ -134,7 +148,8 @@ export class MarketDataService {
                 liquidity: tokenData.liquidity || 0
             };
             
-            return marketData.price_usd > 0 ? marketData : null;
+            console.log(`✅ Birdeye: Found data for ${mint.slice(0, 8)}... - Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
+            return marketData;
             
         } catch (error) {
             return null;
@@ -170,16 +185,23 @@ export class MarketDataService {
             
             const tokenData = data.data[mint];
             const price = tokenData.price || 0;
-            const defaultSupply = 1000000000;
             
-            const marketData: MarketData = {
-                price_usd: price,
-                marketcap: price * defaultSupply,
-                volume_24h: 0,
-                liquidity: 0
-            };
+            // Jupiter often has price data even for very new tokens
+            if (price > 0) {
+                const defaultSupply = 1000000000;
+                const marketData: MarketData = {
+                    price_usd: price,
+                    marketcap: price * defaultSupply,
+                    volume_24h: 0,
+                    liquidity: 0
+                };
+                
+                console.log(`✅ Jupiter: Found price for ${mint.slice(0, 8)}... - Price: $${price}, MC: $${marketData.marketcap}`);
+                return marketData;
+            }
             
-            return marketData.price_usd > 0 ? marketData : null;
+            console.log(`⚠️ Jupiter: No price data for ${mint.slice(0, 8)}...`);
+            return null;
             
         } catch (error) {
             return null;
@@ -220,16 +242,23 @@ export class MarketDataService {
             
             const tokenData = data[0];
             const price = tokenData.price || 0;
-            const defaultSupply = 1000000000;
             
-            const marketData: MarketData = {
-                price_usd: price,
-                marketcap: price * defaultSupply,
-                volume_24h: 0,
-                liquidity: 0
-            };
+            // Helius sometimes has price data for new tokens
+            if (price > 0) {
+                const defaultSupply = 1000000000;
+                const marketData: MarketData = {
+                    price_usd: price,
+                    marketcap: price * defaultSupply,
+                    volume_24h: 0,
+                    liquidity: 0
+                };
+                
+                console.log(`✅ Helius: Found price for ${mint.slice(0, 8)}... - Price: $${price}, MC: $${marketData.marketcap}`);
+                return marketData;
+            }
             
-            return marketData.price_usd > 0 ? marketData : null;
+            console.log(`⚠️ Helius: No price data for ${mint.slice(0, 8)}...`);
+            return null;
             
         } catch (error) {
             return null;
