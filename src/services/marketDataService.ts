@@ -103,7 +103,7 @@ export class MarketDataService {
     private async getBirdeyeMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
             
             const response = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${mint}`, {
                 method: 'GET',
@@ -160,7 +160,7 @@ export class MarketDataService {
     private async getJupiterMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout
             
             const response = await fetch(`https://price.jup.ag/v4/price?ids=${mint}`, {
                 method: 'GET',
@@ -212,7 +212,7 @@ export class MarketDataService {
     private async getHeliusMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout
             
             const response = await fetch(`https://api.helius.xyz/v0/token-metadata?api-key=${this.heliusApiKey}`, {
                 method: 'POST',

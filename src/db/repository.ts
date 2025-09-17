@@ -571,23 +571,39 @@ export class TokenRepository {
         return rows.map((r: any) => r.mint);
     }
 
-    async findTokensNeedingUpdate(limit: number = 20): Promise<Token[]> {
-        const query = `
-            SELECT t.*, mc.timestamp as last_market_update
-            FROM tokens t
-            LEFT JOIN marketcaps mc ON t.id = mc.token_id
-            WHERE t.status = 'fresh' 
-            AND (
-                mc.timestamp IS NULL 
-                OR mc.timestamp < NOW() - INTERVAL '5 minutes'
-            )
-            ORDER BY t.created_at DESC
-            LIMIT $1
-        `;
-        
-        const result = await db.query(query, [limit]);
-        return result.rows;
-    }
+        async findTokensNeedingUpdate(limit: number = 20): Promise<Token[]> {
+            const query = `
+                SELECT t.*, mc.timestamp as last_market_update
+                FROM tokens t
+                LEFT JOIN marketcaps mc ON t.id = mc.token_id
+                WHERE t.status = 'fresh'
+                AND (
+                    mc.timestamp IS NULL
+                    OR mc.timestamp < NOW() - INTERVAL '5 minutes'
+                )
+                ORDER BY t.created_at DESC
+                LIMIT $1
+            `;
+
+            const result = await db.query(query, [limit]);
+            return result.rows;
+        }
+
+        async findTokensNeedingMarketData(limit: number = 20): Promise<Token[]> {
+            const query = `
+                SELECT t.*
+                FROM tokens t
+                LEFT JOIN marketcaps mc ON t.id = mc.token_id
+                WHERE t.status = 'fresh'
+                AND mc.id IS NULL
+                AND t.created_at > NOW() - INTERVAL '5 minutes'
+                ORDER BY t.created_at DESC
+                LIMIT $1
+            `;
+
+            const result = await db.query(query, [limit]);
+            return result.rows;
+        }
 
 }
 

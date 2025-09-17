@@ -1,15 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { tokenRepository } from '../db/repository';
 import { logger } from '../utils/logger';
-import { MarketDataService } from '../services/marketDataService';
-
 const router = Router();
-
-// Initialize market data service for on-demand fetching
-const marketDataService = new MarketDataService(
-    process.env.BIRDEYE_API_KEY || '',
-    process.env.HELIUS_API_KEY || ''
-);
 
 // GET /tokens/fresh - Get latest fresh and curve tokens, ordered by blocktime DESC
 router.get('/fresh', async (req: Request, res: Response) => {
@@ -25,46 +17,33 @@ router.get('/fresh', async (req: Request, res: Response) => {
 
         // Get ONLY fresh tokens - don't mix with curve tokens
         const freshTokens = await tokenRepository.findFreshTokens(limit, offset);
-        const total = await tokenRepository.countFreshTokens();
         
-        // ON-DEMAND MARKET DATA FETCHING
-        console.log(`🚀 ON-DEMAND: Checking ${freshTokens.length} tokens for market data`);
-        logger.info(`🚀 ON-DEMAND: Checking ${freshTokens.length} tokens for market data`);
+        // PIPELINE: Only return tokens that have market data (filter out nulls)
+        console.log(`📊 PIPELINE: Filtering ${freshTokens.length} tokens - only showing those with market data`);
+        logger.info(`📊 PIPELINE: Filtering ${freshTokens.length} tokens - only showing those with market data`);
         
-        // Check which tokens need market data and fetch it immediately
-        const tokensWithMarketData = await Promise.all(
-            freshTokens.map(async (token: any) => {
-                // Check if token already has market data
-                if (token.marketcap && token.marketcap > 0) {
-                    console.log(`✅ Token ${token.mint.slice(0, 8)}... already has market data: $${token.marketcap}`);
-                    return token;
-                }
-                
-                // Fetch market data immediately for tokens without it
-                console.log(`🔍 ON-DEMAND: Fetching market data for ${token.mint.slice(0, 8)}...`);
-                try {
-                    const success = await marketDataService.fetchMarketDataImmediately(token.mint, token.id);
-                    if (success) {
-                        console.log(`✅ ON-DEMAND SUCCESS: Market data fetched for ${token.mint.slice(0, 8)}...`);
-                        // Refetch the token with updated market data
-                        const updatedToken = await tokenRepository.findByMint(token.mint);
-                        return updatedToken || token;
-                    } else {
-                        console.log(`❌ ON-DEMAND FAILED: No market data for ${token.mint.slice(0, 8)}...`);
-                        return token;
-                    }
-                } catch (error) {
-                    console.error(`❌ ON-DEMAND ERROR for ${token.mint.slice(0, 8)}...:`, error);
-                    return token;
-                }
-            })
-        );
+        // Filter out tokens without market data
+        const tokensWithMarketData = freshTokens.filter((token: any) => {
+            const hasMarketData = token.marketcap && 
+                                token.marketcap > 0 && 
+                                token.marketcap !== '0' && 
+                                token.marketcap !== 'null' &&
+                                token.marketcap !== null;
+            
+            if (hasMarketData) {
+                console.log(`✅ Token ${token.mint.slice(0, 8)}... has market data: $${token.marketcap}`);
+            } else {
+                console.log(`⏳ Token ${token.mint.slice(0, 8)}... waiting for market data`);
+            }
+            
+            return hasMarketData;
+        });
         
-        console.log(`✅ ON-DEMAND COMPLETE: Processed ${tokensWithMarketData.length} tokens`);
-        logger.info(`✅ ON-DEMAND COMPLETE: Processed ${tokensWithMarketData.length} tokens`);
+        console.log(`📊 PIPELINE: Showing ${tokensWithMarketData.length}/${freshTokens.length} tokens with market data`);
+        logger.info(`📊 PIPELINE: Showing ${tokensWithMarketData.length}/${freshTokens.length} tokens with market data`);
         
         return res.json({
-            total,
+            total: tokensWithMarketData.length,
             items: tokensWithMarketData
         });
         
