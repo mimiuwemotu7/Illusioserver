@@ -44,6 +44,7 @@ export interface FeatureUsage {
 export class AnalyticsService {
     private static instance: AnalyticsService;
     private isRunning = false;
+    private isDatabaseReady = false;
     private intervalId?: NodeJS.Timeout;
 
     public static getInstance(): AnalyticsService {
@@ -101,6 +102,11 @@ export class AnalyticsService {
     // Track API call
     async trackApiCall(sessionId: string, endpoint: string, method: string, responseTime?: number, statusCode?: number, errorMessage?: string): Promise<void> {
         try {
+            // Skip analytics if database is not ready
+            if (!this.isDatabaseReady) {
+                return;
+            }
+
             // First ensure the session exists
             await this.ensureSessionExists(sessionId);
 
@@ -117,8 +123,8 @@ export class AnalyticsService {
                 WHERE session_id = $1
             `, [sessionId]);
         } catch (error: any) {
-            if (error.message?.includes('timeout')) {
-                logger.warn('Analytics API call tracking timeout - skipping');
+            if (error.message?.includes('timeout') || error.message?.includes('pool')) {
+                logger.warn('Analytics API call tracking failed - skipping');
             } else {
                 logger.error('Error tracking API call:', error.message);
             }
@@ -133,10 +139,10 @@ export class AnalyticsService {
             const result = await db.query(checkQuery, [sessionId]);
             
             if (result.rows.length === 0) {
-                // Create session if it doesn't exist
+                // Create session if it doesn't exist - use a valid IP address format
                 const insertQuery = `
                     INSERT INTO user_sessions (session_id, ip_address, user_agent, created_at, last_activity)
-                    VALUES ($1, 'unknown', 'unknown', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    VALUES ($1, '127.0.0.1', 'unknown', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     ON CONFLICT (session_id) DO NOTHING
                 `;
                 await db.query(insertQuery, [sessionId]);
@@ -149,6 +155,11 @@ export class AnalyticsService {
     // Track feature usage
     async trackFeatureUsage(sessionId: string, featureName: string, action: string, metadata?: any): Promise<void> {
         try {
+            // Skip analytics if database is not ready
+            if (!this.isDatabaseReady) {
+                return;
+            }
+
             // First ensure the session exists
             await this.ensureSessionExists(sessionId);
 
@@ -158,8 +169,8 @@ export class AnalyticsService {
             `;
             await db.query(query, [sessionId, featureName, action, JSON.stringify(metadata)]);
         } catch (error: any) {
-            if (error.message?.includes('timeout')) {
-                logger.warn('Analytics feature usage tracking timeout - skipping');
+            if (error.message?.includes('timeout') || error.message?.includes('pool')) {
+                logger.warn('Analytics feature usage tracking failed - skipping');
             } else {
                 logger.error('Error tracking feature usage:', error.message);
             }
@@ -312,6 +323,12 @@ export class AnalyticsService {
 
         logger.info('🚀 Starting Analytics Service...');
         this.isRunning = true;
+
+        // Mark database as ready after a short delay to ensure it's stable
+        setTimeout(() => {
+            this.isDatabaseReady = true;
+            logger.info('Analytics service database ready');
+        }, 5000); // 5 second delay
 
         // Collect metrics every 30 seconds
         this.intervalId = setInterval(async () => {
