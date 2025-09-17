@@ -171,25 +171,28 @@ export class MintWatcherService {
 
             logger.info(`Successfully processed mint: ${mintInfo.mint} (${mintInfo.decimals} decimals)`);
             
-            // IMMEDIATE market data fetching - this is the key change!
-            console.log(`🚀 IMMEDIATE MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
-            logger.info(`🚀 IMMEDIATE MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            // ULTRA-FAST market data fetching - completely non-blocking!
+            console.log(`⚡ ULTRA-FAST MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
+            logger.info(`⚡ ULTRA-FAST MARKET DATA FETCH for new mint: ${mintInfo.mint}`);
             
-            try {
-                // Fetch market data immediately (non-blocking)
-                const marketDataSuccess = await this.marketDataService.fetchMarketDataImmediately(mintInfo.mint, newToken.id);
-                
-                if (marketDataSuccess) {
-                    console.log(`✅ IMMEDIATE MARKET DATA SUCCESS for ${mintInfo.mint}`);
-                    logger.info(`✅ IMMEDIATE MARKET DATA SUCCESS for ${mintInfo.mint}`);
-                } else {
-                    console.log(`❌ IMMEDIATE MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
-                    logger.warn(`❌ IMMEDIATE MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+            // Use setImmediate to make this truly non-blocking
+            setImmediate(async () => {
+                try {
+                    // Fetch market data immediately (non-blocking)
+                    const marketDataSuccess = await this.marketDataService.fetchMarketDataImmediately(mintInfo.mint, newToken.id);
+                    
+                    if (marketDataSuccess) {
+                        console.log(`⚡ ULTRA-FAST MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                        logger.info(`⚡ ULTRA-FAST MARKET DATA SUCCESS for ${mintInfo.mint}`);
+                    } else {
+                        console.log(`❌ ULTRA-FAST MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+                        logger.warn(`❌ ULTRA-FAST MARKET DATA FAILED for ${mintInfo.mint} - will retry later`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error in ultra-fast market data fetch for ${mintInfo.mint}:`, error);
+                    logger.error(`❌ Error in ultra-fast market data fetch for ${mintInfo.mint}:`, error);
                 }
-            } catch (error) {
-                console.error(`❌ Error in immediate market data fetch for ${mintInfo.mint}:`, error);
-                logger.error(`❌ Error in immediate market data fetch for ${mintInfo.mint}:`, error);
-            }
+            });
             
             // IMMEDIATE metadata enrichment for fresh mint
             try {

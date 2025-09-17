@@ -11,6 +11,8 @@ interface MarketData {
 export class MarketDataService {
     private birdeyeApiKey: string;
     private heliusApiKey: string;
+    private requestCache: Map<string, { data: MarketData; timestamp: number }> = new Map();
+    private readonly CACHE_TTL = 30000; // 30 seconds cache
 
     constructor(birdeyeApiKey: string, heliusApiKey: string) {
         this.birdeyeApiKey = birdeyeApiKey;
@@ -18,66 +20,59 @@ export class MarketDataService {
     }
 
     /**
-     * Fetch market data immediately for a new mint
+     * Fetch market data immediately for a new mint - OPTIMIZED FOR SPEED
      * This is the core function that will be called from mintWatcher
      */
     async fetchMarketDataImmediately(mint: string, tokenId: number): Promise<boolean> {
         try {
-            console.log(`🚀 IMMEDIATE MARKET DATA FETCH for ${mint.slice(0, 8)}...`);
-            logger.info(`🚀 IMMEDIATE MARKET DATA FETCH for ${mint.slice(0, 8)}...`);
+            console.log(`🚀 ULTRA-FAST MARKET DATA FETCH for ${mint.slice(0, 8)}...`);
+            logger.info(`🚀 ULTRA-FAST MARKET DATA FETCH for ${mint.slice(0, 8)}...`);
 
-            let marketData: MarketData | null = null;
-
-            // Try Birdeye first (most comprehensive)
-            if (this.birdeyeApiKey && this.birdeyeApiKey !== 'your_birdeye_api_key_here') {
-                console.log(`🔍 Trying Birdeye API for ${mint.slice(0, 8)}...`);
-                marketData = await this.getBirdeyeMarketData(mint);
-                
-                if (marketData && marketData.price_usd > 0) {
-                    console.log(`✅ Birdeye SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                    logger.info(`✅ Birdeye SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                } else {
-                    console.log(`❌ Birdeye failed for ${mint.slice(0, 8)}...`);
-                    marketData = null;
-                }
-            }
-
-            // Fallback to Jupiter if Birdeye fails
-            if (!marketData || marketData.price_usd === 0) {
-                console.log(`🔄 Trying Jupiter fallback for ${mint.slice(0, 8)}...`);
-                marketData = await this.getJupiterMarketData(mint);
-                
-                if (marketData && marketData.price_usd > 0) {
-                    console.log(`✅ Jupiter SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                    logger.info(`✅ Jupiter SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                } else {
-                    console.log(`❌ Jupiter failed for ${mint.slice(0, 8)}...`);
-                    marketData = null;
-                }
-            }
-
-            // Final fallback to Helius
-            if (!marketData || marketData.price_usd === 0) {
-                console.log(`🔄 Trying Helius fallback for ${mint.slice(0, 8)}...`);
-                marketData = await this.getHeliusMarketData(mint);
-                
-                if (marketData && marketData.price_usd > 0) {
-                    console.log(`✅ Helius SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                    logger.info(`✅ Helius SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
-                } else {
-                    console.log(`❌ All APIs failed for ${mint.slice(0, 8)}...`);
-                    return false;
-                }
-            }
-
-            // Save market data to database
-            if (marketData) {
-                await this.saveMarketData(mint, tokenId, marketData);
-                console.log(`💾 SAVED MARKET DATA for ${mint}: MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
-                logger.info(`💾 SAVED MARKET DATA for ${mint}: MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}`);
+            // Check cache first
+            const cached = this.getCachedData(mint);
+            if (cached) {
+                console.log(`⚡ CACHE HIT for ${mint.slice(0, 8)}... - using cached data`);
+                await this.saveMarketData(mint, tokenId, cached);
                 return true;
             }
 
+            // Try all APIs in parallel for maximum speed
+            const promises = [];
+            
+            if (this.birdeyeApiKey && this.birdeyeApiKey !== 'your_birdeye_api_key_here') {
+                promises.push(this.getBirdeyeMarketDataFast(mint));
+            }
+            
+            promises.push(this.getJupiterMarketDataFast(mint));
+            promises.push(this.getHeliusMarketDataFast(mint));
+
+            // Race all APIs - first one to succeed wins
+            const results = await Promise.allSettled(promises);
+            
+            let marketData: MarketData | null = null;
+            let successSource = '';
+
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                if (result.status === 'fulfilled' && result.value && result.value.price_usd > 0) {
+                    marketData = result.value;
+                    successSource = i === 0 ? 'Birdeye' : i === 1 ? 'Jupiter' : 'Helius';
+                    break;
+                }
+            }
+
+            if (marketData) {
+                // Cache the result
+                this.setCachedData(mint, marketData);
+                
+                // Save to database
+                await this.saveMarketData(mint, tokenId, marketData);
+                console.log(`⚡ ${successSource} SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
+                logger.info(`⚡ ${successSource} SUCCESS: Price: $${marketData.price_usd}, MC: $${marketData.marketcap}`);
+                return true;
+            }
+
+            console.log(`❌ All APIs failed for ${mint.slice(0, 8)}...`);
             return false;
 
         } catch (error) {
@@ -87,9 +82,27 @@ export class MarketDataService {
         }
     }
 
-    private async getBirdeyeMarketData(mint: string): Promise<MarketData | null> {
+    // Cache methods for ultra-fast responses
+    private getCachedData(mint: string): MarketData | null {
+        const cached = this.requestCache.get(mint);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+            return cached.data;
+        }
+        return null;
+    }
+
+    private setCachedData(mint: string, data: MarketData): void {
+        this.requestCache.set(mint, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    // ULTRA-FAST Birdeye API call with minimal timeout
+    private async getBirdeyeMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
-            console.log(`🌐 BIRDEYE API CALL: https://public-api.birdeye.so/defi/token_overview?address=${mint}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
             
             const response = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${mint}`, {
                 method: 'GET',
@@ -97,21 +110,19 @@ export class MarketDataService {
                     'X-API-KEY': this.birdeyeApiKey,
                     'accept': 'application/json',
                     'x-chain': 'solana'
-                }
+                },
+                signal: controller.signal
             });
             
-            console.log(`📡 BIRDEYE RESPONSE: ${response.status} ${response.statusText}`);
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
-                console.log(`❌ Birdeye API error: ${response.status} ${response.statusText}`);
                 return null;
             }
             
             const data: any = await response.json();
-            console.log(`🔍 BIRDEYE DATA:`, JSON.stringify(data, null, 2));
             
             if (!data.success || !data.data) {
-                console.log(`❌ No Birdeye data for ${mint}`);
                 return null;
             }
             
@@ -123,22 +134,18 @@ export class MarketDataService {
                 liquidity: tokenData.liquidity || 0
             };
             
-            console.log(`📊 BIRDEYE EXTRACTED: Price=${marketData.price_usd}, MC=${marketData.marketcap}, Vol=${marketData.volume_24h}, Liq=${marketData.liquidity}`);
-            
-            return marketData;
+            return marketData.price_usd > 0 ? marketData : null;
             
         } catch (error) {
-            console.error(`❌ Birdeye API error for ${mint}:`, error);
             return null;
         }
     }
 
-    private async getJupiterMarketData(mint: string): Promise<MarketData | null> {
+    // ULTRA-FAST Jupiter API call with minimal timeout
+    private async getJupiterMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
-            console.log(`🌐 JUPITER API CALL: https://price.jup.ag/v4/price?ids=${mint}`);
-            
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
             
             const response = await fetch(`https://price.jup.ag/v4/price?ids=${mint}`, {
                 method: 'GET',
@@ -152,45 +159,38 @@ export class MarketDataService {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                console.log(`❌ Jupiter API error: ${response.status}`);
                 return null;
             }
             
             const data: any = await response.json();
             
             if (!data.data || !data.data[mint]) {
-                console.log(`❌ No Jupiter data for ${mint}`);
                 return null;
             }
             
             const tokenData = data.data[mint];
             const price = tokenData.price || 0;
-            
-            // Calculate marketcap with default supply (1 billion tokens)
             const defaultSupply = 1000000000;
+            
             const marketData: MarketData = {
                 price_usd: price,
                 marketcap: price * defaultSupply,
-                volume_24h: 0, // Jupiter doesn't provide volume
-                liquidity: 0   // Jupiter doesn't provide liquidity
+                volume_24h: 0,
+                liquidity: 0
             };
             
-            console.log(`📊 JUPITER EXTRACTED: Price=${marketData.price_usd}, MC=${marketData.marketcap}`);
-            
-            return marketData;
+            return marketData.price_usd > 0 ? marketData : null;
             
         } catch (error) {
-            console.error(`❌ Jupiter API error for ${mint}:`, error);
             return null;
         }
     }
 
-    private async getHeliusMarketData(mint: string): Promise<MarketData | null> {
+    // ULTRA-FAST Helius API call with minimal timeout
+    private async getHeliusMarketDataFast(mint: string): Promise<MarketData | null> {
         try {
-            console.log(`🌐 HELIUS API CALL: https://api.helius.xyz/v0/token-metadata`);
-            
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
             
             const response = await fetch(`https://api.helius.xyz/v0/token-metadata?api-key=${this.heliusApiKey}`, {
                 method: 'POST',
@@ -209,38 +209,33 @@ export class MarketDataService {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                console.log(`❌ Helius API error: ${response.status}`);
                 return null;
             }
             
             const data: any = await response.json();
             
             if (!data || !data[0] || !data[0].price) {
-                console.log(`❌ No Helius data for ${mint}`);
                 return null;
             }
             
             const tokenData = data[0];
             const price = tokenData.price || 0;
-            
-            // Calculate marketcap with default supply (1 billion tokens)
             const defaultSupply = 1000000000;
+            
             const marketData: MarketData = {
                 price_usd: price,
                 marketcap: price * defaultSupply,
-                volume_24h: 0, // Helius doesn't provide volume in this endpoint
-                liquidity: 0   // Helius doesn't provide liquidity in this endpoint
+                volume_24h: 0,
+                liquidity: 0
             };
             
-            console.log(`📊 HELIUS EXTRACTED: Price=${marketData.price_usd}, MC=${marketData.marketcap}`);
-            
-            return marketData;
+            return marketData.price_usd > 0 ? marketData : null;
             
         } catch (error) {
-            console.error(`❌ Helius API error for ${mint}:`, error);
             return null;
         }
     }
+
 
     private async saveMarketData(mint: string, tokenId: number, marketData: MarketData): Promise<void> {
         try {
