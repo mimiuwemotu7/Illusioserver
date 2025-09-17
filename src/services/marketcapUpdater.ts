@@ -102,13 +102,18 @@ export class MarketcapUpdaterService {
             
             // Process ALL 50 fresh tokens every cycle for maximum coverage
             const tokensToProcess = targetTokens.slice(0, 50); // Process exactly 50 fresh tokens every cycle
-            logger.info(`🚀 Processing ${tokensToProcess.length} fresh tokens every 2 seconds`);
+            logger.info(`🚀 Processing ${tokensToProcess.length} fresh tokens every 500ms`);
             
             // Log some sample tokens with their current marketcap status
             if (tokensToProcess.length > 0) {
                 const sampleTokens = tokensToProcess.slice(0, 3);
                 const sampleInfo = sampleTokens.map(t => `${t.mint.slice(0,8)}... (MC: ${(t as any).marketcap ? `$${(t as any).marketcap}` : 'N/A'})`).join(', ');
                 logger.info(`📝 Sample tokens: ${sampleInfo}`);
+                
+                // Count tokens with and without market data
+                const tokensWithData = tokensToProcess.filter(t => (t as any).marketcap && (t as any).marketcap > 0).length;
+                const tokensWithoutData = tokensToProcess.length - tokensWithData;
+                logger.info(`📊 Market data status: ${tokensWithData} tokens with data, ${tokensWithoutData} tokens without data`);
             }
             
             // Update target tokens with price data using BATCH API CALLS for maximum speed
@@ -123,8 +128,9 @@ export class MarketcapUpdaterService {
                 }
                 
                 // Process each batch with rate limiting
-                batches.forEach((batch) => {
+                batches.forEach((batch, batchIndex) => {
                     this.requestQueue.push(async () => {
+                        logger.info(`🔄 Processing batch ${batchIndex + 1}/${batches.length} with ${batch.length} tokens`);
                         await this.updateBatchMarketcap(batch);
                     });
                 });
@@ -203,21 +209,24 @@ export class MarketcapUpdaterService {
 
     private async updateTokenMarketcap(contractAddress: string, tokenId: number): Promise<void> {
         try {
+            logger.info(`🔍 Starting marketcap update for ${contractAddress.slice(0,8)}...`);
+            
             // Try to get market data from multiple sources
             let marketData: MarketData | null = null;
             
             // Try Birdeye API first for comprehensive market data
+            logger.info(`🌐 Attempting Birdeye API for ${contractAddress.slice(0,8)}...`);
             marketData = await this.getBirdeyeMarketData(contractAddress);
             
             // If Birdeye fails or returns no data, try Jupiter as fallback
             if (!marketData || marketData.price_usd === 0) {
-                logger.info(`🔄 Birdeye failed for ${contractAddress}, trying Jupiter fallback...`);
+                logger.info(`🔄 Birdeye failed for ${contractAddress.slice(0,8)}..., trying Jupiter fallback...`);
                 marketData = await this.getJupiterMarketData(contractAddress);
             }
             
             // If Jupiter also fails, try Helius as final fallback
             if (!marketData || marketData.price_usd === 0) {
-                logger.info(`🔄 Jupiter failed for ${contractAddress}, trying Helius fallback...`);
+                logger.info(`🔄 Jupiter failed for ${contractAddress.slice(0,8)}..., trying Helius fallback...`);
                 marketData = await this.getHeliusMarketData(contractAddress);
             }
             
@@ -280,7 +289,7 @@ export class MarketcapUpdaterService {
                 
                 logger.debug(`Updated marketcap for ${contractAddress}: $${marketData.marketcap.toLocaleString()}`);
             } else {
-                logger.debug(`No market data available for ${contractAddress}`);
+                logger.warn(`❌ No market data available for ${contractAddress.slice(0,8)}... from any source (Birdeye, Jupiter, Helius all failed)`);
             }
             
         } catch (error) {
