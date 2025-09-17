@@ -191,28 +191,38 @@ export class MarketcapUpdaterService {
         logger.info(`Processing rate-limited queue: ${this.requestQueue.length} requests pending`);
 
         while (this.requestQueue.length > 0) {
-            const request = this.requestQueue.shift();
-            if (request) {
-                try {
-                    // Ensure we respect the rate limit (1 request per second)
-                    const timeSinceLastRequest = Date.now() - this.lastRequestTime;
-                    if (timeSinceLastRequest < this.RATE_LIMIT_MS) {
-                        const waitTime = this.RATE_LIMIT_MS - timeSinceLastRequest;
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
+            // Process up to 10 requests per cycle for faster processing
+            const requestsToProcess = Math.min(10, this.requestQueue.length);
+            
+            for (let i = 0; i < requestsToProcess; i++) {
+                const request = this.requestQueue.shift();
+                if (request) {
+                    try {
+                        // Ensure we respect the rate limit (5ms between requests)
+                        const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+                        if (timeSinceLastRequest < this.RATE_LIMIT_MS) {
+                            const waitTime = this.RATE_LIMIT_MS - timeSinceLastRequest;
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                        }
 
-                    console.log(`Executing queue request: ${this.requestQueue.length} remaining`);
-                    await request();
-                    this.lastRequestTime = Date.now();
-                    
-                    // Log progress every 5 requests for better visibility
-                    if (this.requestQueue.length % 5 === 0) {
-                        console.log(`Queue progress: ${this.requestQueue.length} requests remaining`);
-                        logger.info(`Queue progress: ${this.requestQueue.length} requests remaining`);
+                        console.log(`Executing queue request: ${this.requestQueue.length} remaining`);
+                        await request();
+                        this.lastRequestTime = Date.now();
+                        
+                        // Log progress every 5 requests for better visibility
+                        if (this.requestQueue.length % 5 === 0) {
+                            console.log(`Queue progress: ${this.requestQueue.length} requests remaining`);
+                            logger.info(`Queue progress: ${this.requestQueue.length} requests remaining`);
+                        }
+                    } catch (error) {
+                        logger.error('Error processing rate-limited request:', error);
                     }
-                } catch (error) {
-                    logger.error('Error processing rate-limited request:', error);
                 }
+            }
+            
+            // Small delay between batches to prevent overwhelming the system
+            if (this.requestQueue.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, 10)); // 10ms delay between batches
             }
         }
 
