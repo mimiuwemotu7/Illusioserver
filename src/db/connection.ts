@@ -249,6 +249,7 @@ class DatabaseConnection {
                         marketcap DECIMAL(20, 2),
                         volume_24h DECIMAL(20, 2),
                         liquidity DECIMAL(20, 2),
+                        dev_holding_percentage DECIMAL(5, 2) DEFAULT 0,
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 `);
@@ -304,6 +305,16 @@ class DatabaseConnection {
                 
                 await client.query(`
                     ALTER TABLE tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(255);
+                `);
+                
+                // Add dev_holding_percentage column to marketcaps table if it doesn't exist
+                await client.query(`
+                    ALTER TABLE marketcaps ADD COLUMN IF NOT EXISTS dev_holding_percentage DECIMAL(5, 2) DEFAULT 0;
+                `);
+                
+                // Create index for dev_holding_percentage for better performance
+                await client.query(`
+                    CREATE INDEX IF NOT EXISTS idx_marketcaps_dev_holding ON marketcaps(dev_holding_percentage);
                 `);
                 
                 // Remove contract_address column if it exists (legacy cleanup)

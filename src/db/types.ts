@@ -26,6 +26,7 @@ export interface MarketCap {
     marketcap: number;
     volume_24h: number;
     liquidity: number;
+    dev_holding_percentage: number;
     timestamp: Date;
 }
 
@@ -36,6 +37,7 @@ export interface TokenWithMarketCap extends Token {
     marketcap?: number;
     volume_24h?: number;
     liquidity?: number;
+    dev_holding_percentage?: number;
 }
 
 export interface PaginatedResponse<T> {

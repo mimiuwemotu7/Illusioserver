@@ -609,14 +609,14 @@ export class TokenRepository {
 
 export class MarketCapRepository {
 
-    async createMarketCap(tokenId: number, priceUsd: number, marketcap: number, volume24h: number, liquidity: number): Promise<MarketCap> {
+    async createMarketCap(tokenId: number, priceUsd: number, marketcap: number, volume24h: number, liquidity: number, devHoldingPercentage: number = 0): Promise<MarketCap> {
         const query = `
-            INSERT INTO marketcaps (token_id, price_usd, marketcap, volume_24h, liquidity)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO marketcaps (token_id, price_usd, marketcap, volume_24h, liquidity, dev_holding_percentage)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
         
-        const result = await db.query(query, [tokenId, priceUsd, marketcap, volume24h, liquidity]);
+        const result = await db.query(query, [tokenId, priceUsd, marketcap, volume24h, liquidity, devHoldingPercentage]);
         logger.info(`Created marketcap record for token ${tokenId}`);
         return result.rows[0];
     }
@@ -651,10 +651,10 @@ export class MarketCapRepository {
     async findByMint(mint: string): Promise<TokenWithMarketCap | null> {
         const query = `
             SELECT t.*, 
-                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.timestamp as marketcap_timestamp
+                   m.price_usd, m.marketcap, m.volume_24h, m.liquidity, m.dev_holding_percentage, m.timestamp as marketcap_timestamp
             FROM tokens t
             LEFT JOIN (
-                SELECT DISTINCT ON (token_id) token_id, price_usd, marketcap, volume_24h, liquidity, timestamp
+                SELECT DISTINCT ON (token_id) token_id, price_usd, marketcap, volume_24h, liquidity, dev_holding_percentage, timestamp
                 FROM marketcaps 
                 ORDER BY token_id, timestamp DESC
             ) m ON m.token_id = t.id
@@ -691,6 +691,7 @@ export class MarketCapRepository {
             marketcap: row.marketcap,
             volume_24h: row.volume_24h,
             liquidity: row.liquidity,
+            dev_holding_percentage: row.dev_holding_percentage,
             latest_marketcap: row.marketcap_timestamp ? {
                 id: 0, // This would need to be properly set if we had the marketcap id
                 token_id: row.id,
@@ -698,6 +699,7 @@ export class MarketCapRepository {
                 marketcap: row.marketcap,
                 volume_24h: row.volume_24h,
                 liquidity: row.liquidity,
+                dev_holding_percentage: row.dev_holding_percentage,
                 timestamp: row.marketcap_timestamp
             } : undefined
         };

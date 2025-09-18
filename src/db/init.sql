@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS marketcaps (
     marketcap DECIMAL(20, 2),
     volume_24h DECIMAL(20, 2),
     liquidity DECIMAL(20, 2),
+    dev_holding_percentage DECIMAL(5, 2) DEFAULT 0,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

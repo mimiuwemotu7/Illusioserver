@@ -7,6 +7,7 @@ interface MarketData {
     marketcap: number;
     volume_24h: number;
     liquidity: number;
+    devHoldingPercentage?: number;
 }
 
 export class MarketcapUpdaterService {
@@ -402,7 +403,8 @@ export class MarketcapUpdaterService {
                 price_usd: tokenData.price || 0,
                 marketcap: tokenData.marketCap || 0, // REAL MARKETCAP FROM API!
                 volume_24h: tokenData.v24hUSD || 0, // 24h volume in USD
-                liquidity: tokenData.liquidity || 0 // REAL LIQUIDITY FROM API!
+                liquidity: tokenData.liquidity || 0, // REAL LIQUIDITY FROM API!
+                devHoldingPercentage: tokenData.devBalancePercentage || 0 // Dev holding percentage
             };
             
             // Debug: Log all available fields from Birdeye response
@@ -711,7 +713,8 @@ export class MarketcapUpdaterService {
                 marketData.price_usd,
                 marketData.marketcap,
                 marketData.volume_24h,
-                marketData.liquidity
+                marketData.liquidity,
+                marketData.devHoldingPercentage || 0
             );
             
             logger.info(`💾 SAVED MARKET DATA for ${contractAddress}: MC: $${marketData.marketcap}, Vol: $${marketData.volume_24h}, Price: $${marketData.price_usd}`);
